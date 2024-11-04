@@ -1,4 +1,4 @@
-dictionary_file_path = "5_letter_words_spellchecked.txt"
+dictionary_file_path = "data/5_letter_words_spellchecked.txt"
 
 
 __all__ = ["dictionary"]
