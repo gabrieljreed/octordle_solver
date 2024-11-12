@@ -5,17 +5,8 @@ from typing import List, Optional, Tuple
 
 from colorama import Back, Fore, Style
 
-DICTIONARY_FILE_PATH = "5_letter_words_spellchecked.txt"
-
-
-class Dictionary:
-    def __init__(self):
-        with open(DICTIONARY_FILE_PATH) as file:
-            self.words = file.readlines()
-        self.words = [word.strip() for word in self.words]
-
-
-dictionary = Dictionary()
+from .dictionary import Dictionary
+from .utils import clear_screen
 
 
 class TileState(Enum):
@@ -26,8 +17,9 @@ class TileState(Enum):
 
 class Game:
     def __init__(self, word: Optional[str] = None) -> None:
+        self.dictionary = Dictionary()
         if word is None:
-            self.word = random.choice(dictionary.words)
+            self.word = random.choice(self.dictionary.words)
         else:
             self.word = word
         self.guessed_letters = set()
@@ -38,21 +30,14 @@ class Game:
         self.misplaced_letters = []
         self.incorrect_letters = []
 
-    def guess(self, word: str) -> bool:
+    def guess(self, word: str):
         """Guess a word."""
         word = word.upper()
         self.parse_guess(word)
         self.guessed_words.append(word)
-        self.clear_screen()
+        clear_screen()
         for word in self.guessed_words:
             self.print_word(word)
-
-    def clear_screen(self):
-        """Clear the screen."""
-        if os.name == "nt":
-            os.system("cls")
-        else:
-            os.system("clear")
 
     def parse_guess(self, guess: str) -> Tuple[List[str], List[str], List[str]]:
         """Parse the guess into correct, misplaced, and incorrect letters."""
@@ -97,7 +82,7 @@ class Game:
         """Filter the words in the dictionary based on the guessed letters."""
         filtered_words = []
 
-        for word in dictionary.words:
+        for word in self.dictionary.words:
             if len(word) != 5:
                 continue
 
@@ -138,7 +123,3 @@ class Game:
 #                 print(f"You lose! The word was {self.game.word}")
 #                 break
 
-
-if __name__ == "__main__":
-    game = Game()
-    game.play()
