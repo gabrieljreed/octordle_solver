@@ -1,19 +1,10 @@
 import itertools
 import sys
-from os import remove
-from pprint import pprint
 from typing import Optional
 
 from colorama import Back, Fore, Style
 
-DICTIONARY_FILE_PATH = "data/5_letter_words_spellchecked.txt"
-
-
-class Dictionary:
-    def __init__(self):
-        with open(DICTIONARY_FILE_PATH) as file:
-            self.words = file.readlines()
-        self.words = [word.strip() for word in self.words]
+from .dictionary import Dictionary
 
 
 class GameState:
@@ -41,7 +32,7 @@ class Group:
         return bool(self.words)
 
 
-def evaluate_game_state(word, possibility, other_word):
+def evaluate_game_state(word, possibility, other_word) -> bool:
     """Evaluate the game state based on the possibility.
 
     Args:
@@ -102,7 +93,12 @@ def pretty_print_group(group: Group, word: str):
     print("---")
 
 
-def print_group_info(groups: list[Group], word: str):
+def print_group_info(groups: Optional[list[Group]], word: Optional[str]) -> None:
+    """Print information about the groups."""
+    if not groups or not word:
+        print("No groups found")
+        return
+
     for group in groups:
         pretty_print_group(group, word)
 
@@ -135,7 +131,8 @@ def get_best_word_groups(remaining_words: list[str], verbose=False) -> tuple[Opt
             best_group = groups
             best_word = word
             if verbose:
-                print(f"New best word: {best_word}")
+                largest_group = max(len(group.words) for group in groups)
+                print(f"New best word: {best_word} ({max_num_groups} groups, largest group {largest_group})")
 
         elif len(groups) == max_num_groups:
             if verbose:
@@ -147,7 +144,9 @@ def get_best_word_groups(remaining_words: list[str], verbose=False) -> tuple[Opt
                 best_group = groups
                 best_word = word
                 if verbose:
-                    print(f"New best word: {best_word} (smaller groups)")
+                    print(
+                        f"\tNew best word: {best_word} ({max_num_groups} groups, largest group {largest_group_current})"
+                    )
 
     return best_group, best_word
 

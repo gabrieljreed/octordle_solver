@@ -1,4 +1,6 @@
-dictionary_file_path = "data/5_letter_words_spellchecked.txt"
+"""Module to load and store the dictionary of words."""
+
+DICTIONARY_FILE_PATH = "data/5_letter_words_spellchecked.txt"
 
 
 __all__ = ["dictionary"]
@@ -6,7 +8,7 @@ __all__ = ["dictionary"]
 
 class Dictionary:
     def __init__(self):
-        with open(dictionary_file_path) as file:
+        with open(DICTIONARY_FILE_PATH) as file:
             self.words = file.readlines()
         self.words = [word.strip() for word in self.words]
 
