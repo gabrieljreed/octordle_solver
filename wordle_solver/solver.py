@@ -107,9 +107,9 @@ class Dictionary:
 
 
 dictionary = Dictionary()
-correct_letters = ["B", "L", "A", "", "E"]
-misplaced_letters = [("L", 0)]
-incorrect_letters = ["C", "R", "N", "S", "T", "D", "M"]
+correct_letters = ["", "", "A", "", ""]
+misplaced_letters = [("E", 4), ("R", 1), ("Y", 1)]
+incorrect_letters = ["C", "N", "S", "L", "P", "H"]
 
 
 
@@ -153,10 +153,27 @@ result = sort_output_dict(frequencies)
 # pprint(result)
 
 scored_words = {word: 0 for word in filtered_words}
+i = 0
+CUTOFF_VALUE = 100
 for word in filtered_words:
+    i += 1
+    if i > CUTOFF_VALUE:
+        break
     for letter in word:
         scored_words[word] += frequencies[letter.lower()]
 
 result = sort_output_dict(scored_words)
 
 pprint(result)
+
+# Prune all words from the list that have duplicate letters
+pruned_words = []
+for word in filtered_words:
+    if len(set(word)) == 5:
+        pruned_words.append(word)
+
+print(f"({len(pruned_words):04d}) pruned_words")
+for obj in pruned_words:
+    print(obj)
+print("---")
+

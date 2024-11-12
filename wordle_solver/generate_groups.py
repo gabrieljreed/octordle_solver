@@ -1,5 +1,19 @@
 import itertools
+from os import remove
+import sys
 from pprint import pprint
+from colorama import Fore, Style, Back
+from typing import Optional
+
+
+DICTIONARY_FILE_PATH = "data/5_letter_words_spellchecked.txt"
+
+
+class Dictionary:
+    def __init__(self):
+        with open(DICTIONARY_FILE_PATH) as file:
+            self.words = file.readlines()
+        self.words = [word.strip() for word in self.words]
 
 
 class GameState:
@@ -53,74 +67,125 @@ def evaluate_game_state(word, possibility, other_word):
     return True
 
 
-if __name__ == "__main__":
+def generate_groups(given_word: str, remaining_words: list[str]) -> list[Group]:
+    """Generate groups for a given word and list of words."""
     all_possibilities = list(itertools.product([0, 1, 2], repeat=5))
-    word = "lease"  # The word we're generating groups for
-    remaining_words = [
-        "shade",
-        "shake",
-        "shame",
-        "shape",
-        "shave",
-        "skate",
-        "spate",
-        "stage",
-        "stake",
-        "state",
-        "stave",
-        "usage",
-        "suave",
-        "spade",
-        "awake",
-        "image",
-        "adage",
-        "quake",
-        "abate",
-        "amaze",
-        "agape",
-        "agave",
-        "agate",
-        "phage",
-        "ovate",
-        "blade",
-        "blame",
-        "blaze",
-        "flame",
-        "plate",
-        "whale",
-        "glaze",
-        "flake",
-        "glade",
-        "slate",
-        "stale",
-        "shale",
-        "slake",
-        "swale",
-        "weave",
-        "heave",
-        "phase",
-        "abase",
-        "tease",
-        "lease",
-        "leave",
-        "evade",
-        "blase",
-        "elate",
-    ]
 
     groups = []
     for possibility in all_possibilities:
         group = Group(words=[], possibility=possibility)
         for remaining_word in remaining_words:
-            if evaluate_game_state(word, possibility, remaining_word):
+            if evaluate_game_state(given_word, possibility, remaining_word):
                 group.words.append(remaining_word)
 
         if group:
             groups.append(group)
 
-    # Sort groups by length
     groups.sort(key=lambda group: len(group.words), reverse=True)
-    pprint(groups)
+
+    return groups
+
+
+def pretty_print_group(group: Group, word: str):
+    output_string = ""
+    for i, letter in enumerate(word):
+        if group.possibility[i] == 0:
+            output_string += Back.GREEN + letter + Back.RESET
+        elif group.possibility[i] == 1:
+            output_string += Back.YELLOW + letter + Back.RESET
+        else:
+            output_string += Style.DIM + letter + Style.RESET_ALL
+
+    print(output_string)
+    for word in group.words:
+        print(word)
+    print("---")
+
+
+def print_group_info(groups: list[Group], word: str):
+    for group in groups:
+        pretty_print_group(group, word)
 
     print(f"Num groups: {len(groups)}")
     print(f"Largest group: {max(len(group.words) for group in groups)}")
+
+
+def get_best_word_groups(remaining_words: list[str], verbose=False) -> tuple[Optional[list[Group]], Optional[str]]:
+    """Get the best word to guess by generating groups.
+
+    Args:
+        remaining_words (list[str]): The list of remaining words.
+        verbose (bool, optional): Whether to print verbose output. Defaults to False.
+
+    Returns:
+        tuple[list[Group], str]: The best group of words and the best word to use.
+    """
+    dictionary = Dictionary()
+    max_num_groups = 0
+    best_group = None
+    best_word = None
+    for word in dictionary.words:
+        groups = generate_groups(word, remaining_words)
+        if best_group is None:
+            best_group = groups
+            best_word = word
+
+        elif len(groups) > max_num_groups:
+            max_num_groups = len(groups)
+            best_group = groups
+            best_word = word
+            if verbose:
+                print(f"New best word: {best_word}")
+
+        elif len(groups) == max_num_groups:
+            if verbose:
+                print(f"Tied best word: {word}")
+            largest_group_best = max(len(group.words) for group in best_group)
+            largest_group_current = max(len(group.words) for group in groups)
+            if largest_group_current < largest_group_best:
+                max_num_groups = len(groups)
+                best_group = groups
+                best_word = word
+                if verbose:
+                    print(f"New best word: {best_word} (smaller groups)")
+
+    return best_group, best_word
+
+
+if __name__ == "__main__":
+    # word = "field"  # The word we're generating groups for
+    remaining_words = [
+        "BEARD",
+        "BEARS",
+        "DEARS",
+        "DEARY",
+        "FEARS",
+        "GEARS",
+        "HEARD",
+        "HEARS",
+        "HEART",
+        "LEARY",
+        "PEARL",
+        "PEARS",
+        "PEART",
+        "READS",
+        "READY",
+        "REALM",
+        "REALS",
+        "REAMS",
+        "REAPS",
+        "TEARS",
+        "TEARY",
+        "WEARS",
+        "WEARY",
+        "YEARS",
+    ]
+
+    best_group, best_word = get_best_word_groups(remaining_words, verbose=True)
+
+    if not best_group or not best_word:
+        print("No best solution found")
+        sys.exit()
+
+    print_group_info(best_group, best_word)
+
