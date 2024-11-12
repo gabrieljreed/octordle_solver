@@ -30,7 +30,7 @@ def generate_alphabet_count_dict() -> dict:
         "w": 0,
         "x": 0,
         "y": 0,
-        "z": 0
+        "z": 0,
     }
 
 
@@ -52,7 +52,7 @@ def count_frequencies_by_position(words: list) -> dict:
         1: generate_alphabet_count_dict(),
         2: generate_alphabet_count_dict(),
         3: generate_alphabet_count_dict(),
-        4: generate_alphabet_count_dict()
+        4: generate_alphabet_count_dict(),
     }
     for word in words:
         for i, letter in enumerate(word):
@@ -110,7 +110,6 @@ dictionary = Dictionary()
 correct_letters = ["", "", "A", "", ""]
 misplaced_letters = [("E", 4), ("R", 1), ("Y", 1)]
 incorrect_letters = ["C", "N", "S", "L", "P", "H"]
-
 
 
 filtered_words = []
@@ -176,4 +175,3 @@ print(f"({len(pruned_words):04d}) pruned_words")
 for obj in pruned_words:
     print(obj)
 print("---")
-

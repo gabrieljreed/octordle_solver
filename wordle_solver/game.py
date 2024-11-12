@@ -1,9 +1,9 @@
 import os
 import random
 from enum import Enum
-from typing import Optional, Tuple, List
-from colorama import Fore, Back, Style
+from typing import List, Optional, Tuple
 
+from colorama import Back, Fore, Style
 
 DICTIONARY_FILE_PATH = "5_letter_words_spellchecked.txt"
 
@@ -119,6 +119,7 @@ class Game:
             filtered_words.append(word)
 
         return filtered_words
+
 
 # class GamePlayer:
 #     def __init__(self, num_guesses: int = 6) -> None:

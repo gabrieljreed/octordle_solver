@@ -1,7 +1,7 @@
-from pathlib import Path
 import re
-import enchant
+from pathlib import Path
 
+import enchant
 
 words_file = Path("wordle_answers.txt")
 output_file = Path("wordle_answers_processed.txt")

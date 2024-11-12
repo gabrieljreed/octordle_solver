@@ -1,10 +1,10 @@
 import itertools
-from os import remove
 import sys
+from os import remove
 from pprint import pprint
-from colorama import Fore, Style, Back
 from typing import Optional
 
+from colorama import Back, Fore, Style
 
 DICTIONARY_FILE_PATH = "data/5_letter_words_spellchecked.txt"
 
@@ -188,4 +188,3 @@ if __name__ == "__main__":
         sys.exit()
 
     print_group_info(best_group, best_word)
-
