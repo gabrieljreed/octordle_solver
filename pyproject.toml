@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "octordle_solver"
+version = "0.1.0"
+authors = [{name = "Gabe Reed", email = "gabrieljreed@gmail.com"}]
+description = "Python package for solving Octordle puzzles"
+keywords = []
+license = {file = "LICENSE"}
+readme = "README.md"
+requires-python = ">=3.6"
+
+[project.urls]
+"Homepage" = "https://github.com/gabrieljreed/octordle_solver"
+"Bug Tracker" = "https://github.com/gabrieljreed/octordle_solver/issues"
