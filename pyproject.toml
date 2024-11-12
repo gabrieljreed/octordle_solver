@@ -12,6 +12,9 @@ license = {file = "LICENSE"}
 readme = "README.md"
 requires-python = ">=3.6"
 
+[tool.setuptools]
+package-dir = {"" = "wordle_solver"}
+
 [project.urls]
 "Homepage" = "https://github.com/gabrieljreed/octordle_solver"
 "Bug Tracker" = "https://github.com/gabrieljreed/octordle_solver/issues"
