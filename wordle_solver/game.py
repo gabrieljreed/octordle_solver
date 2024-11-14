@@ -5,51 +5,70 @@ from typing import List, Optional, Tuple
 
 from colorama import Back, Fore, Style
 
+from .constants import TileState
 from .dictionary import Dictionary
 from .utils import clear_screen
-
-
-class TileState(Enum):
-    UNSET = 0
-    CORRECT = 1
-    INCORRECT = 2
+from .solver import filter_words
 
 
 class Game:
-    def __init__(self, word: Optional[str] = None) -> None:
+    def __init__(self, word: Optional[str] = None, clear_screen: bool = True) -> None:
+        """Initialize the game.
+
+        Args:
+            word (Optional[str], optional): The word to use for the game, if None, a random word is chosen.
+        """
         self.dictionary = Dictionary()
         if word is None:
             self.word = random.choice(self.dictionary.words)
         else:
             self.word = word
+
         self.guessed_letters = set()
         self.guessed_words = []
         self.num_tries = 6
 
-        self.correct_letters = []
+        self.correct_letters = ["", "", "", "", ""]
         self.misplaced_letters = []
         self.incorrect_letters = []
 
-    def guess(self, word: str):
-        """Guess a word."""
+        self.remaining_words = self.dictionary.words.copy()
+
+        # Settings
+        self._clear_screen = clear_screen
+
+    def __str__(self) -> str:
+        return f"Word: {self.word}\nCorrect: {self.correct_letters}\nMisplaced: {self.misplaced_letters}\nIncorrect: {self.incorrect_letters}\nRemaining words: {len(self.remaining_words)}"
+
+    def guess(self, word: str) -> None:
+        """Guess a word.
+
+        Args:
+            word (str): The word to guess.
+        """
         word = word.upper()
         self.parse_guess(word)
         self.guessed_words.append(word)
-        clear_screen()
+        if self._clear_screen:
+            clear_screen()
         for word in self.guessed_words:
             self.print_word(word)
 
-    def parse_guess(self, guess: str) -> Tuple[List[str], List[str], List[str]]:
-        """Parse the guess into correct, misplaced, and incorrect letters."""
+    def parse_guess(self, guess: str) -> None:
+        """Parse the guess into correct, misplaced, and incorrect letters.
+
+        Args:
+            guess (str): The word to parse.
+        """
         for i, (guess_letter, actual_letter) in enumerate(zip(guess, self.word)):
             if guess_letter == actual_letter:
-                self.correct_letters.append(guess_letter)
+                self.correct_letters[i] = guess_letter
             elif guess_letter in self.word:
                 self.misplaced_letters.append((guess_letter, i))
             else:
                 self.incorrect_letters.append(guess_letter)
 
-    def print_word(self, word):
+    def print_word(self, word) -> None:
         """Print the word with the guessed letters highlighted."""
         word = word.upper()
         output_string = ""
@@ -64,10 +83,12 @@ class Game:
 
         print(output_string)
 
-    def play(self):
+    def play(self) -> None:
         while True:
-            filtered_words = self.filter_words()
-            print(f"({len(filtered_words)}) words remaining")
+            self.remaining_words = filter_words(
+                self.remaining_words, self.correct_letters, self.misplaced_letters, self.incorrect_letters
+            )
+            print(f"({len(self.remaining_words)}) words remaining")
             guess = input("Enter a guess: ")
             self.guess(guess)
             if guess == self.word:
@@ -77,49 +98,3 @@ class Game:
             if self.num_tries == 0:
                 print(f"You lose! The word was {self.word}")
                 break
-
-    def filter_words(self):
-        """Filter the words in the dictionary based on the guessed letters."""
-        filtered_words = []
-
-        for word in self.dictionary.words:
-            if len(word) != 5:
-                continue
-
-            # Check if the word contains the correct letters in the correct positions
-            if any(word[i] != letter for i, letter in enumerate(self.correct_letters) if letter):
-                continue
-
-            # Check if the word contains the misplaced letters
-            if any(letter[0] not in word for letter in self.misplaced_letters):
-                continue
-
-            if any(word[position] == letter for letter, position in self.misplaced_letters):
-                continue
-
-            # Check if the word contains any of the incorrect letters
-            if any(letter in word for letter in self.incorrect_letters):
-                continue
-
-            filtered_words.append(word)
-
-        return filtered_words
-
-
-# class GamePlayer:
-#     def __init__(self, num_guesses: int = 6) -> None:
-#         self.game = Game()
-#         self.num_guesses = num_guesses
-
-#     def play(self) -> None:
-#         while True:
-#             guess = input("Enter a guess: ")
-#             self.game.guess(guess)
-#             if guess == self.game.word:
-#                 print("You win!")
-#                 break
-#             self.num_guesses -= 1
-#             if self.num_guesses == 0:
-#                 print(f"You lose! The word was {self.game.word}")
-#                 break
-

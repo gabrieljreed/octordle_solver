@@ -1,4 +1,5 @@
 """Utility functions."""
+
 import os
 
 
@@ -8,4 +9,3 @@ def clear_screen():
         os.system("cls")
     else:
         os.system("clear")
-

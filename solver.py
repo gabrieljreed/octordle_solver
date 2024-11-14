@@ -1,28 +1,31 @@
-from wordle_solver.utils import clear_screen
-from wordle_solver.solver import filter_words
-from wordle_solver.dictionary import Dictionary
-from wordle_solver.generate_groups import get_best_word_groups, print_group_info
-
 from colorama import Back, Style
 
+from wordle_solver.dictionary import Dictionary
+from wordle_solver.generate_groups import get_best_word_groups, print_group_info, get_best_word_groups_parallel
+from wordle_solver.solver import filter_words
+from wordle_solver.utils import clear_screen
 
 STARTING_GUESS = "CRANE"
 
 
 def show_help():
-    print("Press q to quit")
-    print("Press ? for help")
+    print("q\t\t Quit the program")
+    print("?\t\t Show help")
+    print("g\t\t Show group information")
 
 
 if __name__ == "__main__":
-    guessed_words = []
     clear_screen()
+
+    guessed_words = []
     best_guess = STARTING_GUESS
     all_words = Dictionary().words.copy()
     remaining_words = Dictionary().words.copy()
     correct_letters = ["", "", "", "", ""]
     incorrect_letters = []
     misplaced_letters = []
+    best_group = None
+
     while True:
         clear_screen()
         for word in guessed_words:
@@ -36,8 +39,13 @@ if __name__ == "__main__":
         if user_input == "q":
             break
 
-        if user_input == "?":
+        elif user_input == "?":
             show_help()
+
+        elif user_input == "g":
+            print_group_info(best_group, best_guess)
+
+        # FIXME: If the user selects ? or g, we need to re-prompt for a guess
 
         if user_input == "":
             selected_word = best_guess
@@ -46,6 +54,7 @@ if __name__ == "__main__":
 
         # Input results
         clear_screen()
+        # TODO: Figure out a better way to input results
         print("Enter the results for the guess")
         print("Y - Yes (Correct letter - Green)")
         print("M - Misplaced (Misplaced letter - Yellow)")
@@ -75,11 +84,33 @@ if __name__ == "__main__":
 
         guessed_words.append(colored_word)
 
+        if guess_result == "YYYYY":
+            clear_screen()
+            for word in guessed_words:
+                print(word)
+            break
+
         # Filter words, give a new best guess
         remaining_words = filter_words(remaining_words, correct_letters, misplaced_letters, incorrect_letters)
-        best_group, best_guess = get_best_word_groups(remaining_words, verbose=True)
-        print_group_info(best_group, best_guess)
+        print(f"{correct_letters = }")
+        print(f"{misplaced_letters = }")
+        print(f"{incorrect_letters = }")
+        print(f"{len(remaining_words)} remaining words")
+        # best_group, best_guess = get_best_word_groups(remaining_words, verbose=True)
+        best_group, best_guess = get_best_word_groups_parallel(remaining_words, verbose=True)
 
         # Also give an option to see other good guesses
 
         # Give a verbose/more details option to see groups, etc.
+
+
+"""
+Basically, I think I can just have it not in a for loop, but just have two functions
+
+def get_guess():
+
+
+def get_results():
+
+Each one can return an exit code, and based off the exit code, you call the other function, call the same function again (like if you get help or switch to verbose mode), call the other function, or exit the program.
+"""
