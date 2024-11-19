@@ -66,8 +66,8 @@ def pretty_print_group(group: Group, word: str):
             output_string += Back.YELLOW + letter + Back.RESET
         else:
             output_string += Style.DIM + letter + Style.RESET_ALL
-
     print(output_string)
+
     for word in group.words:
         print(word)
     print("---")
@@ -253,6 +253,41 @@ def get_best_word_groups_parallel(remaining_words: list[str], verbose=False):
                 largest_group_best = max(len(group.words) for group in best_group)
                 largest_group_current = max(len(group.words) for group in groups)
                 if largest_group_current < largest_group_best:
+                    max_num_groups = len(groups)
+                    best_group = groups
+                    best_word = word
+                    if verbose:
+                        print(
+                            f"\tNew best word: {best_word} ({max_num_groups} groups, largest group {largest_group_current})"
+                        )
+
+    if len(remaining_words) > 100:
+        print(f"Too many remaining words {len(remaining_words)}, returning now")
+        return best_group, best_word
+
+    # Rerun over the remaining words and favor them if there's a tie
+    print("Rerunning over remaining words")
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        futures = {executor.submit(process_word, word, remaining_words): word for word in remaining_words}
+        for future in concurrent.futures.as_completed(futures):
+            word, groups = future.result()
+            if best_group is None:
+                best_group = groups
+                best_word = word
+                max_num_groups = len(groups)
+            elif len(groups) > max_num_groups:
+                max_num_groups = len(groups)
+                best_group = groups
+                best_word = word
+                if verbose:
+                    largest_group = max(len(group.words) for group in groups)
+                    print(f"New best word: {best_word} ({max_num_groups} groups, largest group {largest_group})")
+            elif len(groups) == max_num_groups:
+                if verbose:
+                    print(f"Tied best word: {word}")
+                largest_group_best = max(len(group.words) for group in best_group)
+                largest_group_current = max(len(group.words) for group in groups)
+                if largest_group_current <= largest_group_best:
                     max_num_groups = len(groups)
                     best_group = groups
                     best_word = word
