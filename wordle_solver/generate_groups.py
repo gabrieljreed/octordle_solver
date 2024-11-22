@@ -215,6 +215,31 @@ def process_word(word, remaining_words):
     return word, groups
 
 
+class AnswerPossibility:
+    def __init__(self, word: str, groups: list[Group]):
+        self.word = word
+        self.groups = groups
+
+    def __str__(self):
+        result = (
+            f"{self.word}: {len(self.groups)} groups, largest group {max(len(group.words) for group in self.groups)}"
+        )
+        # TODO: Improve color printout here
+        for group in self.groups:
+            result += f"\n\t{group}"
+        return result
+
+    def __gt__(self, other):
+        """Overload > operator.
+
+        If the number of groups is the same, favor smaller groups. Otherwise, favor more groups.
+        """
+        if len(self.groups) == len(other.groups):
+            return max(len(group.words) for group in self.groups) > max(len(group.words) for group in other.groups)
+
+        return len(self.groups) > len(other.groups)
+
+
 def get_best_word_groups_parallel(remaining_words: list[str], verbose=False):
     """Get the best word to guess by generating groups.
 
@@ -297,3 +322,18 @@ def get_best_word_groups_parallel(remaining_words: list[str], verbose=False):
                         )
 
     return best_group, best_word
+
+
+def get_all_answer_possibilities(remaining_words: list[str], verbose=False):
+    """Like get_best_word_groups_parallel, but returns all possibilities."""
+    all_possibilities: list[AnswerPossibility] = []
+
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        futures = {executor.submit(process_word, word, remaining_words): word for word in remaining_words}
+        for future in concurrent.futures.as_completed(futures):
+            word, groups = future.result()
+            all_possibilities.append(AnswerPossibility(word, groups))
+
+    all_possibilities.sort(reverse=True)
+
+    return all_possibilities
