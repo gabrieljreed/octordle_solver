@@ -1,6 +1,6 @@
 from colorama import Back, Style
 
-from wordle_solver.dictionary import Dictionary
+from wordle_solver.dictionary import dictionary
 from wordle_solver.generate_groups import get_best_word_groups, print_group_info, get_best_word_groups_parallel
 from wordle_solver.solver import filter_words
 from wordle_solver.utils import clear_screen
@@ -19,8 +19,8 @@ if __name__ == "__main__":
 
     guessed_words = []
     best_guess = STARTING_GUESS
-    all_words = Dictionary().words.copy()
-    remaining_words = Dictionary().words.copy()
+    all_words = dictionary.words.copy()
+    remaining_words = dictionary.words.copy()
     correct_letters = ["", "", "", "", ""]
     incorrect_letters = []
     misplaced_letters = []

@@ -255,6 +255,9 @@ def get_best_word_groups_parallel(remaining_words: list[str], verbose=False):
     best_group = None
     best_word = None
 
+    if len(remaining_words) == 1:
+        return [Group(remaining_words, Possibility(0, 0, 0, 0, 0))], remaining_words[0]
+
     # TODO: if there are 2 or fewer words, just return the first word
 
     with concurrent.futures.ProcessPoolExecutor() as executor:
