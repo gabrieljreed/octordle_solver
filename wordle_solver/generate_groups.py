@@ -1,10 +1,9 @@
 import itertools
-import sys
 from typing import Optional
 import numpy as np
 import concurrent.futures
 
-from colorama import Back, Fore, Style
+from colorama import Back, Style
 
 from .dictionary import Dictionary
 

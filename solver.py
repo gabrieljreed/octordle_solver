@@ -82,6 +82,9 @@ if __name__ == "__main__":
                 colored_word += Style.DIM + letter + Style.RESET_ALL
                 incorrect_letters.append(letter)
 
+        # A letter can be correct and also show up in the incorrect word list, filter that out
+        incorrect_letters = [letter for letter in incorrect_letters if letter not in correct_letters]
+
         guessed_words.append(colored_word)
 
         if guess_result == "YYYYY":
