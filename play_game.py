@@ -1,4 +1,4 @@
-from wordle_solver.game import Game
+from octordle_solver.game import Game
 
 if __name__ == "__main__":
     game = Game()

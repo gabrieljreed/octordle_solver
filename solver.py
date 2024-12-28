@@ -1,9 +1,9 @@
 from colorama import Back, Style
 
-from wordle_solver.dictionary import dictionary
-from wordle_solver.generate_groups import get_best_word_groups, print_group_info, get_best_word_groups_parallel
-from wordle_solver.solver import filter_words
-from wordle_solver.utils import clear_screen
+from octordle_solver.dictionary import dictionary
+from octordle_solver.generate_groups import get_best_word_groups, print_group_info, get_best_word_groups_parallel
+from octordle_solver.solver import filter_words
+from octordle_solver.utils import clear_screen
 
 STARTING_GUESS = "CRANE"
 

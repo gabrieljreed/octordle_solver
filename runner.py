@@ -1,8 +1,8 @@
 from pprint import pprint
 
-from wordle_solver.dictionary import Dictionary
-from wordle_solver.generate_groups import get_best_word_groups, print_group_info
-from wordle_solver.solver import filter_plurals, filter_words
+from octordle_solver.dictionary import Dictionary
+from octordle_solver.generate_groups import get_best_word_groups, print_group_info
+from octordle_solver.solver import filter_plurals, filter_words
 
 if __name__ == "__main__":
     dictionary = Dictionary()

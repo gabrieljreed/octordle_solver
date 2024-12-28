@@ -6,14 +6,15 @@ build-backend = "setuptools.build_meta"
 name = "octordle_solver"
 version = "0.1.0"
 authors = [{name = "Gabe Reed", email = "gabrieljreed@gmail.com"}]
-description = "Python package for solving Octordle puzzles"
+description = "Python package for solving Wordle and Octordle puzzles"
 keywords = []
-license = {file = "LICENSE"}
 readme = "README.md"
 requires-python = ">=3.6"
+dependencies = ["colorama"]
 
 [tool.setuptools]
-package-dir = {"" = "wordle_solver"}
+# package-dir = {"" = "wordle_solver"}
+package-data = { "octordle_solver" = ["data/*"] }
 
 [tool.isort]
 profile = "black"

@@ -1,12 +1,12 @@
-from wordle_solver.dictionary import Dictionary
-from wordle_solver.generate_groups import (
+from octordle_solver.dictionary import Dictionary
+from octordle_solver.generate_groups import (
     get_best_word_groups,
     print_group_info,
     get_best_word_groups_parallel,
     get_all_answer_possibilities,
 )
-from wordle_solver.solver import filter_words
-from wordle_solver.utils import clear_screen
+from octordle_solver.solver import filter_words
+from octordle_solver.utils import clear_screen
 
 
 if __name__ == "__main__":

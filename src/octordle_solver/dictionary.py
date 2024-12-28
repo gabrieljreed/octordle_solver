@@ -1,6 +1,7 @@
 """Module to load and store the dictionary of words."""
+from pathlib import Path
 
-DICTIONARY_FILE_PATH = "data/5_letter_words_spellchecked.txt"
+DICTIONARY_FILE_PATH = Path(__file__).parent / "data" / "5_letter_words_spellchecked.txt"
 
 
 __all__ = ["dictionary"]

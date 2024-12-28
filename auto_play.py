@@ -1,8 +1,8 @@
 from utils import clear_screen
-from wordle_solver.game import Game
-from wordle_solver.generate_groups import get_best_word_groups, get_best_word_groups_parallel
-from wordle_solver.constants import STARTING_GUESS
-from wordle_solver.solver import filter_words
+from octordle_solver.game import Game
+from octordle_solver.generate_groups import get_best_word_groups, get_best_word_groups_parallel
+from octordle_solver.constants import STARTING_GUESS
+from octordle_solver.solver import filter_words
 from time import time
 import sys
 
