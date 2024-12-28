@@ -82,8 +82,14 @@ if __name__ == "__main__":
                 colored_word += Style.DIM + letter + Style.RESET_ALL
                 incorrect_letters.append(letter)
 
-        # A letter can be correct and also show up in the incorrect word list, filter that out
-        incorrect_letters = [letter for letter in incorrect_letters if letter not in correct_letters]
+        # A letter can be correct or misplaced and also show up in the incorrect word list, filter that out
+        new_incorrect_letters = []
+        misplaced_letters_no_positions = [letter[0] for letter in misplaced_letters]
+        for letter in incorrect_letters:
+            if letter in correct_letters or letter in misplaced_letters_no_positions:
+                continue
+            new_incorrect_letters.append(letter)
+        incorrect_letters = new_incorrect_letters
 
         guessed_words.append(colored_word)
 
