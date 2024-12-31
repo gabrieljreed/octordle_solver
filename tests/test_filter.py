@@ -14,6 +14,20 @@ import pytest
             [], 
             ["BBCDE"],
         ],
+        [
+            ["ABCDE", "BBCDE"], 
+            ["A", "", "", "", ""], 
+            [], 
+            [], 
+            ["ABCDE"],
+        ],
+        [
+            ["ABCDE", "BBCDE"], 
+            ["", "", "", "", ""], 
+            [], 
+            [("A", 2)], 
+            ["ABCDE"],
+        ],
     ],
 )
 def test_filter(words, correct_letters, incorrect_letters, misplaced_letters, expected):

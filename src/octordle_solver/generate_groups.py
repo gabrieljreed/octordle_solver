@@ -330,8 +330,15 @@ def get_all_answer_possibilities(remaining_words: list[str], verbose=False):
     """Like get_best_word_groups_parallel, but returns all possibilities."""
     all_possibilities: list[AnswerPossibility] = []
 
+    if len(remaining_words) == 1:
+        word, groups = process_word(remaining_words[0], remaining_words)
+        all_possibilities = [AnswerPossibility(word, groups)]
+
+    dictionary = Dictionary()
+    words = remaining_words + dictionary.words
+
     with concurrent.futures.ProcessPoolExecutor() as executor:
-        futures = {executor.submit(process_word, word, remaining_words): word for word in remaining_words}
+        futures = {executor.submit(process_word, word, remaining_words): word for word in words}
         for future in concurrent.futures.as_completed(futures):
             word, groups = future.result()
             all_possibilities.append(AnswerPossibility(word, groups))

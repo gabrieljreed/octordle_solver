@@ -1,7 +1,7 @@
 from colorama import Back, Style
 
 from octordle_solver.dictionary import dictionary
-from octordle_solver.generate_groups import get_best_word_groups, print_group_info, get_best_word_groups_parallel
+from octordle_solver.generate_groups import get_best_word_groups, print_group_info, get_best_word_groups_parallel, get_all_answer_possibilities
 from octordle_solver.solver import filter_words
 from octordle_solver.utils import clear_screen
 
@@ -105,8 +105,10 @@ if __name__ == "__main__":
         print(f"{misplaced_letters = }")
         print(f"{incorrect_letters = }")
         print(f"{len(remaining_words)} remaining words")
-        # best_group, best_guess = get_best_word_groups(remaining_words, verbose=True)
-        best_group, best_guess = get_best_word_groups_parallel(remaining_words, verbose=True)
+        possibilities = get_all_answer_possibilities(remaining_words)
+        best_possibility = possibilities[0]
+        best_guess = best_possibility.word
+        best_group = best_possibility.groups
 
         # Also give an option to see other good guesses
 
