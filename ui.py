@@ -1,9 +1,9 @@
-from octordle_solver.ui import WordleClone
+from octordle_solver.ui import WordleSolver
 from PySide6 import QtWidgets
 
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication([])
-    window = WordleClone()
+    window = WordleSolver()
     window.show()
     app.exec()

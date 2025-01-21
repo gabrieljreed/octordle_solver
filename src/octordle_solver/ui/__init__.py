@@ -11,6 +11,8 @@ from enum import Enum
 
 
 class Color(Enum):
+    """Store the wordle colors."""
+
     YELLOW = "c3ae55"
     GREEN = "69ab64"
     GRAY = "767a7d"
@@ -18,9 +20,11 @@ class Color(Enum):
 
 
 class LetterWidget(QtWidgets.QLabel):
+    """Custom label to hold a letter."""
+
     def __init__(self, parent=None):
         """Initialize the widget."""
-        super().__init__()
+        super().__init__(parent)
         self.setFixedSize(60, 60)
         self.setStyleSheet(
             """
@@ -54,6 +58,11 @@ class LetterWidget(QtWidgets.QLabel):
         self.set_color(colors[next_index])
 
     def set_color(self, color: Color):
+        """Set the specified color.
+
+        Args:
+            color (Color): The color to set.
+        """
         self.current_color = color
         self.setStyleSheet(
             f"""
@@ -69,10 +78,13 @@ class LetterWidget(QtWidgets.QLabel):
         )
 
 
-class WordleClone(QtWidgets.QMainWindow):
+class WordleSolver(QtWidgets.QMainWindow):
+    """UI to solve Wordle puzzles."""
+
     def __init__(self):
+        """Initialize the window."""
         super().__init__()
-        self.setWindowTitle("Wordle Clone")
+        self.setWindowTitle("Wordle Solver")
         self.setFixedSize(1000, 600)
 
         # Main container
@@ -180,10 +192,11 @@ class WordleClone(QtWidgets.QMainWindow):
         self.update_remaining_words_widget()
 
     def _create_grid(self):
-        self.letter_boxes = []  # Store QLabel references
-        for row in range(6):  # 6 rows
+        """Create the grid of letter boxes."""
+        self.letter_boxes = []
+        for row in range(6):
             row_boxes = []
-            for col in range(5):  # 5 columns
+            for col in range(5):
                 label = LetterWidget()
                 self.grid_layout.addWidget(label, row, col)
                 row_boxes.append(label)
@@ -191,26 +204,26 @@ class WordleClone(QtWidgets.QMainWindow):
 
     def keyPressEvent(self, event):
         """Handle key press events."""
-        if event.key() in range(Qt.Key_A, Qt.Key_Z + 1):  # Letter keys
+        if event.key() in range(Qt.Key_A, Qt.Key_Z + 1):
             self._handle_letter_input(event.text().upper())
-        elif event.key() == Qt.Key_Backspace:  # Backspace key
+        elif event.key() == Qt.Key_Backspace:
             self._handle_backspace()
         elif event.key() == Qt.Key_Return:
             self._handle_enter()
 
     def _handle_letter_input(self, letter):
         """Handle a letter input."""
-        if self._current_row < 6 and self._current_col < 5:  # Ensure within bounds
+        if self._current_row < 6 and self._current_col < 5:
             current_box = self.letter_boxes[self._current_row][self._current_col]
             current_box.setText(letter)
-            self._current_col += 1  # Move to the next column
+            self._current_col += 1
 
     def _handle_backspace(self):
         """Handle backspace to remove a letter."""
-        if self._current_col > 0:  # If there's a letter to remove
-            self._current_col -= 1  # Move back a column
+        if self._current_col > 0:
+            self._current_col -= 1
             current_box = self.letter_boxes[self._current_row][self._current_col]
-            current_box.setText("")  # Clear the box
+            current_box.setText("")
 
     def _handle_enter(self):
         """Handle enter to move to the next row."""
@@ -247,7 +260,11 @@ class WordleClone(QtWidgets.QMainWindow):
         self.remaining_words_list.addItems(self.remaining_words)
         self.remaining_words_label.setText(f"{len(self.remaining_words)} Remaining Word(s)")
 
-    def get_remaining_words(self):
+    def get_best_guesses(self):
+        """Get the best guesses for the given game state.
+
+        This function is threaded, and will call _on_get_answer_possibilities_finished when done.
+        """
         if self._current_row == 0:
             return
 
@@ -261,14 +278,6 @@ class WordleClone(QtWidgets.QMainWindow):
 
         self.update_remaining_words_widget()
 
-    def get_best_guesses(self):
-        # TODO: Probably combine this with the previous function
-        if self._current_row == 0:
-            return
-
-        self.get_remaining_words()
-        # self.possibilities = get_all_answer_possibilities(self.remaining_words)
-
         thread_worker = ThreadWorker(fn=get_all_answer_possibilities, remaining_words=self.remaining_words)
         thread_worker.signals.result.connect(self._on_get_answer_possibilities_finished)
 
@@ -281,6 +290,7 @@ class WordleClone(QtWidgets.QMainWindow):
         self.threadpool.start(thread_worker)
 
     def _on_get_answer_possibilities_finished(self, possibilities):
+        """Update the UI when the thread worker from get_best_guesses finishes."""
         self.possibilities = possibilities
 
         self.get_best_guess_button.setText("Get best guesses")
@@ -290,6 +300,7 @@ class WordleClone(QtWidgets.QMainWindow):
             self.best_guess_list.addItem(possibility.word)
 
     def update_groups_widgets(self):
+        """Update the group widgets when the user picks an answer possibility."""
         word = self.best_guess_list.currentItem().text()
         index = self.best_guess_list.currentRow()
         groups = self.possibilities[index].groups
