@@ -5,6 +5,7 @@ from octordle_solver.generate_groups import get_all_answer_possibilities
 
 from ..solver import filter_words
 from ..dictionary import Dictionary
+from .threading import ThreadWorker
 
 from enum import Enum
 
@@ -143,8 +144,6 @@ class WordleClone(QtWidgets.QMainWindow):
         self._current_row = 0
         self._current_col = 0
 
-        self.setFocus()
-
         self.remaining_words = Dictionary().words.copy()
         self.correct_letters = ["", "", "", "", ""]
         self.misplaced_letters = []
@@ -152,6 +151,11 @@ class WordleClone(QtWidgets.QMainWindow):
         self.possibilities = []
 
         self.update_remaining_words_widget()
+
+        self.threadpool = QtCore.QThreadPool()
+        self.original_style_sheet = self.styleSheet()
+
+        self.setFocus()
 
     def reset_game(self):
         """Reset the game back to its initial state."""
@@ -244,8 +248,6 @@ class WordleClone(QtWidgets.QMainWindow):
         self.remaining_words_label.setText(f"{len(self.remaining_words)} Remaining Word(s)")
 
     def get_remaining_words(self):
-        print("Getting remaining words")
-
         if self._current_row == 0:
             return
 
@@ -265,9 +267,25 @@ class WordleClone(QtWidgets.QMainWindow):
             return
 
         self.get_remaining_words()
-        self.possibilities = get_all_answer_possibilities(self.remaining_words)
+        # self.possibilities = get_all_answer_possibilities(self.remaining_words)
+
+        thread_worker = ThreadWorker(fn=get_all_answer_possibilities, remaining_words=self.remaining_words)
+        thread_worker.signals.result.connect(self._on_get_answer_possibilities_finished)
+
+        self.get_best_guess_button.setText("Calculating best guesses...")
+        self.get_best_guess_button.setDisabled(True)
+        self.original_style_sheet = self.styleSheet()
         self.best_guess_list.clear()
         self.groups_tree_widget.clear()
+
+        self.threadpool.start(thread_worker)
+
+    def _on_get_answer_possibilities_finished(self, possibilities):
+        self.possibilities = possibilities
+
+        self.get_best_guess_button.setText("Get best guesses")
+        self.get_best_guess_button.setDisabled(False)
+
         for possibility in self.possibilities:
             self.best_guess_list.addItem(possibility.word)
 
