@@ -10,7 +10,7 @@ description = "Python package for solving Wordle and Octordle puzzles"
 keywords = []
 readme = "README.md"
 requires-python = ">=3.6"
-dependencies = ["colorama"]
+dependencies = ["colorama", "Pyside6"]
 
 [tool.setuptools]
 # package-dir = {"" = "wordle_solver"}
