@@ -185,6 +185,7 @@ class WordleSolver(QtWidgets.QMainWindow):
                 current_box = self.letter_boxes[i][j]
                 current_box.setText("")
                 current_box.set_color(Color.WHITE)
+                current_box.letter_is_set = False
 
         self.best_guess_list.clear()
         self.groups_tree_widget.clear()
