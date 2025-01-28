@@ -173,6 +173,8 @@ class WordleSolver(QtWidgets.QMainWindow):
         self.incorrect_letters = []
         self.possibilities = []
 
+        self.computed_guesses = [False, False, False, False, False, False]
+
         self.update_remaining_words_widget()
 
         self.threadpool = QtCore.QThreadPool()
@@ -266,24 +268,30 @@ class WordleSolver(QtWidgets.QMainWindow):
         self._current_row += 1
         self._current_col = 0
 
-    def _update_game_state(self, row: int):
+    def _update_game_state(self):
         """Update the game state with the results of the given row."""
-        if row >= self._current_row:
-            return
-
         word = ""
-        for i in range(5):
-            current_box = self.letter_boxes[row][i]
-            letter = current_box.text()
-            word += letter
-            if current_box.current_color == Color.GRAY:
-                self.incorrect_letters.append(letter)
-            elif current_box.current_color == Color.YELLOW:
-                self.misplaced_letters.append((letter, i))
-            else:
-                self.correct_letters[i] = letter
+        for row in range(6):
+            if row == self._current_row:
+                break
 
-            self.guessed_word = word
+            if self.computed_guesses[row]:
+                continue
+
+            for col in range(5):
+                current_box = self.letter_boxes[row][col]
+                letter = current_box.text()
+                word += letter
+                if current_box.current_color == Color.GRAY:
+                    self.incorrect_letters.append(letter)
+                elif current_box.current_color == Color.YELLOW:
+                    self.misplaced_letters.append((letter, col))
+                else:
+                    self.correct_letters[col] = letter
+
+                self.guessed_word = word
+
+            self.computed_guesses[row] = True
 
     def update_remaining_words_widget(self):
         """Update the widgets with the remaining words."""
@@ -299,7 +307,7 @@ class WordleSolver(QtWidgets.QMainWindow):
         if self._current_row == 0:
             return
 
-        self._update_game_state(self._current_row - 1)
+        self._update_game_state()
         self.remaining_words = filter_words(
             self.remaining_words,
             self.correct_letters,
