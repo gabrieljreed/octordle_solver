@@ -1,6 +1,7 @@
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtCore import Qt
 from functools import partial
+from typing import Optional
 
 from octordle_solver.generate_groups import get_all_answer_possibilities, get_best_second_guess
 
@@ -79,6 +80,42 @@ class LetterWidget(QtWidgets.QLabel):
         )
 
 
+class HelpDialog(QtWidgets.QDialog):
+    def __init__(self, parent: Optional[QtWidgets.QWidget] = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("How to use the Solver")
+
+        layout = QtWidgets.QVBoxLayout(self)
+
+        instructions_label = QtWidgets.QLabel(
+            "Welcome to the Wordle Solver!\n\n"
+            "Enter your guess by typing. When you're finished, press Enter.\n"
+            '(Alternatively, double click a guess from the "Best Guesses" list.)\n'
+            "\n"
+            "Click the letters to update their colors based on the Wordle feedback.\n"
+            "     🟩: correct letter and position.\n"
+            "     🟨: correct letter, wrong position.\n"
+            "     ⬜: letter is not in the word.\n"
+            "\n"
+            'When you\'ve set the letter colors, click "Get best guesses". '
+            'This will calculate the best possible guesses and update the "Best Guesses" list.\n'
+            "\n"
+            'Click on a word in the "Best Guesses" list to see how choosing it will split up the remaining words. '
+            "Having more, smaller word groups will lead to faster solving!\n"
+            "\n"
+            'Use the "Remaining Words" list to see what words are still possible.\n'
+            "\n"
+            "Happy Solving!"
+            "\n"
+        )
+        instructions_label.setWordWrap(True)
+        layout.addWidget(instructions_label)
+
+        close_button = QtWidgets.QPushButton("Close")
+        close_button.clicked.connect(self.accept)
+        layout.addWidget(close_button)
+
+
 class WordleSolver(QtWidgets.QMainWindow):
     """UI to solve Wordle puzzles."""
 
@@ -155,6 +192,7 @@ class WordleSolver(QtWidgets.QMainWindow):
         file_menu.addAction(self.reset_action)
 
         self.help_action = QtGui.QAction("Help", self)
+        self.help_action.triggered.connect(self.show_help_dialog)
         file_menu.addAction(self.help_action)
 
         self.debug_action = QtGui.QAction("Debug", self)
@@ -181,6 +219,10 @@ class WordleSolver(QtWidgets.QMainWindow):
         self.original_style_sheet = self.styleSheet()
 
         self.setFocus()
+
+    def show_help_dialog(self):
+        dialog = HelpDialog(self)
+        dialog.show()
 
     def reset_game(self):
         """Reset the game back to its initial state."""
@@ -256,10 +298,6 @@ class WordleSolver(QtWidgets.QMainWindow):
         for i in range(5):
             letter = self.letter_boxes[self._current_row][i].text()
             word += letter
-
-        if word not in self.valid_guesses:
-            print("Word is not valid, try again")
-            return
 
         for i in range(5):
             current_box = self.letter_boxes[self._current_row][i]
