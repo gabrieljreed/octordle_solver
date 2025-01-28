@@ -1,5 +1,6 @@
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtCore import Qt
+from functools import partial
 
 from octordle_solver.generate_groups import get_all_answer_possibilities, get_best_second_guess
 
@@ -112,6 +113,9 @@ class WordleSolver(QtWidgets.QMainWindow):
         self.best_guess_list = QtWidgets.QListWidget()
         self.best_guess_list.addItem("CRANE")
         self.best_guess_list.itemSelectionChanged.connect(self.update_groups_widgets)
+        self.best_guess_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.best_guess_list.customContextMenuRequested.connect(self.show_best_guess_context_menu)
+        self.best_guess_list.itemDoubleClicked.connect(self.handle_best_guess_double_click)
         self.best_guess_widget.layout().addWidget(self.best_guess_list)
 
         # Groups
@@ -344,10 +348,14 @@ class WordleSolver(QtWidgets.QMainWindow):
         self.get_best_guess_button.setDisabled(False)
 
         for possibility in self.possibilities:
-            self.best_guess_list.addItem(possibility.word)
+            if not self.best_guess_list.findItems(possibility.word, Qt.MatchFlag.MatchExactly):
+                self.best_guess_list.addItem(possibility.word)
 
     def update_groups_widgets(self):
         """Update the group widgets when the user picks an answer possibility."""
+        if not self.possibilities:
+            return
+
         word = self.best_guess_list.currentItem().text()
         index = self.best_guess_list.currentRow()
         groups = self.possibilities[index].groups
@@ -400,3 +408,25 @@ class WordleSolver(QtWidgets.QMainWindow):
         self.average_group_label.setText(f"Average Group Size: {average_size:.1f}")
 
         self.setFocus()
+
+    def show_best_guess_context_menu(self, point):
+        """Show a context menu for the best guess list widget."""
+        menu = QtWidgets.QMenu(self)
+
+        current_word = self.best_guess_list.currentItem().text()
+
+        use_guess_action = QtGui.QAction(f"Use {current_word} as next guess")
+        use_guess_action.triggered.connect(partial(self.use_selected_guess, current_word))
+        menu.addAction(use_guess_action)
+
+        menu.exec(self.best_guess_list.mapToGlobal(point))
+
+    def handle_best_guess_double_click(self, item):
+        self.use_selected_guess(item.text())
+
+    def use_selected_guess(self, guess):
+        """Use the selected word from the best guess list as the next guess."""
+        for letter in guess:
+            current_box = self.letter_boxes[self._current_row][self._current_col]
+            current_box.setText(letter)
+            self._current_col += 1
