@@ -1,10 +1,10 @@
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtCore import Qt
 
-from octordle_solver.generate_groups import get_all_answer_possibilities
+from octordle_solver.generate_groups import get_all_answer_possibilities, get_best_second_guess
 
 from ..solver import filter_words
-from ..dictionary import Dictionary
+from ..dictionary import dictionary
 from .threading import ThreadWorker
 
 from enum import Enum
@@ -110,6 +110,7 @@ class WordleSolver(QtWidgets.QMainWindow):
         self.best_guess_widget.layout().addWidget(QtWidgets.QLabel("Best guesses"))
 
         self.best_guess_list = QtWidgets.QListWidget()
+        self.best_guess_list.addItem("CRANE")
         self.best_guess_list.itemSelectionChanged.connect(self.update_groups_widgets)
         self.best_guess_widget.layout().addWidget(self.best_guess_list)
 
@@ -152,11 +153,17 @@ class WordleSolver(QtWidgets.QMainWindow):
         self.help_action = QtGui.QAction("Help", self)
         file_menu.addAction(self.help_action)
 
+        self.debug_action = QtGui.QAction("Debug", self)
+        self.debug_action.triggered.connect(self.debug)
+        file_menu.addAction(self.debug_action)
+
         # Setup variables
         self._current_row = 0
         self._current_col = 0
 
-        self.remaining_words = Dictionary().words.copy()
+        self.guessed_word = ""
+        self.remaining_words = dictionary.valid_answers.copy()
+        self.valid_guesses = dictionary.valid_guesses.copy()
         self.correct_letters = ["", "", "", "", ""]
         self.misplaced_letters = []
         self.incorrect_letters = []
@@ -171,7 +178,8 @@ class WordleSolver(QtWidgets.QMainWindow):
 
     def reset_game(self):
         """Reset the game back to its initial state."""
-        self.remaining_words = Dictionary().words.copy()
+        self.remaining_words = dictionary.valid_answers.copy()
+        self.valid_guesses = dictionary.valid_guesses.copy()
         self.correct_letters = ["", "", "", "", ""]
         self.misplaced_letters = []
         self.incorrect_letters = []
@@ -191,6 +199,11 @@ class WordleSolver(QtWidgets.QMainWindow):
         self.groups_tree_widget.clear()
 
         self.update_remaining_words_widget()
+        self.setFocus()
+
+    def debug(self):
+        print(f"{self._current_row = }")
+        print(f"{self._current_col = }")
 
     def _create_grid(self):
         """Create the grid of letter boxes."""
@@ -227,33 +240,46 @@ class WordleSolver(QtWidgets.QMainWindow):
             current_box.setText("")
 
     def _handle_enter(self):
-        """Handle enter to move to the next row."""
-        if self._current_row < 6 and self._current_col == 5:
-            for i in range(5):
-                current_box = self.letter_boxes[self._current_row][i]
-                current_box.letter_is_set = True
-                current_box.set_color(Color.GRAY)
-
-            self._current_row += 1
-            self._current_col = 0
-
-        else:
+        """Handle enter to move to the next row if the word is valid."""
+        if self._current_row > 6 or self._current_col != 5:
             print("Word is not complete")
+            return
+
+        word = ""
+        for i in range(5):
+            letter = self.letter_boxes[self._current_row][i].text()
+            word += letter
+
+        if word not in self.valid_guesses:
+            print("Word is not valid, try again")
+            return
+
+        for i in range(5):
+            current_box = self.letter_boxes[self._current_row][i]
+            current_box.letter_is_set = True
+            current_box.set_color(Color.GRAY)
+
+        self._current_row += 1
+        self._current_col = 0
 
     def _update_game_state(self, row: int):
         """Update the game state with the results of the given row."""
         if row >= self._current_row:
             return
 
+        word = ""
         for i in range(5):
             current_box = self.letter_boxes[row][i]
             letter = current_box.text()
+            word += letter
             if current_box.current_color == Color.GRAY:
                 self.incorrect_letters.append(letter)
             elif current_box.current_color == Color.YELLOW:
                 self.misplaced_letters.append((letter, i))
             else:
                 self.correct_letters[i] = letter
+
+            self.guessed_word = word
 
     def update_remaining_words_widget(self):
         """Update the widgets with the remaining words."""
@@ -278,15 +304,35 @@ class WordleSolver(QtWidgets.QMainWindow):
         )
 
         self.update_remaining_words_widget()
+        self.best_guess_list.clear()
+        self.groups_tree_widget.clear()
 
-        thread_worker = ThreadWorker(fn=get_all_answer_possibilities, remaining_words=self.remaining_words)
+        # If it's the first guess, get the cached best second guess (if the first guess was "CRANE")
+        if self._current_row == 1 and self.guessed_word == "CRANE":
+            answer_possibility = []
+            for i in range(5):
+                current_box = self.letter_boxes[0][i]
+                if current_box.current_color == Color.GREEN:
+                    answer_possibility.append(0)
+                elif current_box.current_color == Color.YELLOW:
+                    answer_possibility.append(1)
+                elif current_box.current_color == Color.GRAY:
+                    answer_possibility.append(2)
+
+            best_second_guess = get_best_second_guess(answer_possibility)
+            if best_second_guess:
+                self.best_guess_list.addItem(best_second_guess)
+
+        thread_worker = ThreadWorker(
+            fn=get_all_answer_possibilities,
+            remaining_words=self.remaining_words,
+            valid_guesses=self.valid_guesses,
+        )
         thread_worker.signals.result.connect(self._on_get_answer_possibilities_finished)
 
         self.get_best_guess_button.setText("Calculating best guesses...")
         self.get_best_guess_button.setDisabled(True)
         self.original_style_sheet = self.styleSheet()
-        self.best_guess_list.clear()
-        self.groups_tree_widget.clear()
 
         self.threadpool.start(thread_worker)
 
