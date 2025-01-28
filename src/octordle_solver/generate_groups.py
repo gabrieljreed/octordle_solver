@@ -5,7 +5,22 @@ import concurrent.futures
 
 from colorama import Back, Style
 
-from .dictionary import Dictionary
+from .dictionary import dictionary
+from pathlib import Path
+import json
+
+
+SECOND_GUESS_PATH = Path(__file__).parent / "data" / "best_second_guesses.json"
+with open(SECOND_GUESS_PATH, "r") as f:
+    best_second_guesses = json.load(f)
+
+
+def get_best_second_guess(answer_possibility) -> Optional[str]:
+    possibility_key = ""
+    for i in answer_possibility:
+        possibility_key += str(i)
+
+    return best_second_guesses.get(possibility_key)
 
 
 class GameState:
@@ -173,11 +188,10 @@ def get_best_word_groups(remaining_words: list[str], verbose=False) -> tuple[Opt
     Returns:
         tuple[list[Group], str]: The best group of words and the best word to use.
     """
-    dictionary = Dictionary()
     max_num_groups = 0
     best_group = None
     best_word = None
-    for word in dictionary.words:
+    for word in dictionary.words.copy():
         groups = generate_groups(word, remaining_words)
         # groups = generate_groups_np(word, remaining_words)
         if best_group is None:
@@ -234,6 +248,8 @@ class AnswerPossibility:
         If the number of groups is the same, favor smaller groups. Otherwise, favor more groups.
         """
         if len(self.groups) == len(other.groups):
+            if len(self.groups) == 0:
+                return True
             return max(len(group.words) for group in self.groups) > max(len(group.words) for group in other.groups)
 
         return len(self.groups) > len(other.groups)
@@ -249,7 +265,7 @@ def get_best_word_groups_parallel(remaining_words: list[str], verbose=False):
     Returns:
         tuple[list[Group], str]: The best group of words and the best word to use.
     """
-    dictionary = Dictionary()
+    words = dictionary.words.copy()
     max_num_groups = 0
     best_group = None
     best_word = None
@@ -260,7 +276,7 @@ def get_best_word_groups_parallel(remaining_words: list[str], verbose=False):
     # TODO: if there are 2 or fewer words, just return the first word
 
     with concurrent.futures.ProcessPoolExecutor() as executor:
-        futures = {executor.submit(process_word, word, remaining_words): word for word in dictionary.words}
+        futures = {executor.submit(process_word, word, remaining_words): word for word in words}
         for future in concurrent.futures.as_completed(futures):
             word, groups = future.result()
             if best_group is None:
@@ -326,15 +342,18 @@ def get_best_word_groups_parallel(remaining_words: list[str], verbose=False):
     return best_group, best_word
 
 
-def get_all_answer_possibilities(remaining_words: list[str], verbose=False):
+def get_all_answer_possibilities(remaining_words: list[str], valid_guesses: Optional[list[str]] = None):
     """Like get_best_word_groups_parallel, but returns all possibilities."""
+    if not valid_guesses:
+        valid_guesses = dictionary.valid_guesses
+
     all_possibilities: list[AnswerPossibility] = []
 
     if len(remaining_words) == 1:
         word, groups = process_word(remaining_words[0], remaining_words)
         all_possibilities = [AnswerPossibility(word, groups)]
 
-    dictionary = Dictionary()
+    # FIXME: This probably has a lot of duplicates in it
     words = remaining_words + dictionary.words
 
     with concurrent.futures.ProcessPoolExecutor() as executor:
