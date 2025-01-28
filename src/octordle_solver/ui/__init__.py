@@ -190,18 +190,19 @@ class WordleSolver(QtWidgets.QMainWindow):
         self.misplaced_letters = []
         self.incorrect_letters = []
         self.possibilities = []
+        self.computed_guesses = [False, False, False, False, False, False]
 
         self._current_row = 0
         self._current_col = 0
 
-        for i in range(5):
-            for j in range(5):
-                current_box = self.letter_boxes[i][j]
-                current_box.setText("")
-                current_box.set_color(Color.WHITE)
-                current_box.letter_is_set = False
+        while self.grid_layout.count():
+            item = self.grid_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        self._create_grid()
 
         self.best_guess_list.clear()
+        self.best_guess_list.addItem("CRANE")
         self.groups_tree_widget.clear()
 
         self.update_remaining_words_widget()
