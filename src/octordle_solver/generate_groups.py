@@ -250,7 +250,7 @@ class AnswerPossibility:
         if len(self.groups) == len(other.groups):
             if len(self.groups) == 0:
                 return True
-            return max(len(group.words) for group in self.groups) > max(len(group.words) for group in other.groups)
+            return max(len(group.words) for group in self.groups) < max(len(group.words) for group in other.groups)
 
         return len(self.groups) > len(other.groups)
 
