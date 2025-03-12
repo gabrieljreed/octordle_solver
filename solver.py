@@ -1,7 +1,12 @@
 from colorama import Back, Style
 
 from octordle_solver.dictionary import dictionary
-from octordle_solver.generate_groups import get_best_word_groups, print_group_info, get_best_word_groups_parallel, get_all_answer_possibilities
+from octordle_solver.generate_groups import (
+    get_best_word_groups,
+    print_group_info,
+    get_best_word_groups_parallel,
+    get_all_answer_possibilities,
+)
 from octordle_solver.solver import filter_words
 from octordle_solver.utils import clear_screen
 

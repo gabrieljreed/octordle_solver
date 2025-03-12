@@ -1,31 +1,30 @@
 from octordle_solver.solver import filter_words
 import pytest
 
+
 @pytest.mark.parametrize(
     "words, correct_letters, incorrect_letters, misplaced_letters, expected",
     [
+        [[], [], [], [], []],
         [
-            [], [], [], [], []
-        ],
-        [
-            ["ABCDE", "BBCDE"], 
-            ["", "", "", "", ""], 
-            ["A"], 
-            [], 
+            ["ABCDE", "BBCDE"],
+            ["", "", "", "", ""],
+            ["A"],
+            [],
             ["BBCDE"],
         ],
         [
-            ["ABCDE", "BBCDE"], 
-            ["A", "", "", "", ""], 
-            [], 
-            [], 
+            ["ABCDE", "BBCDE"],
+            ["A", "", "", "", ""],
+            [],
+            [],
             ["ABCDE"],
         ],
         [
-            ["ABCDE", "BBCDE"], 
-            ["", "", "", "", ""], 
-            [], 
-            [("A", 2)], 
+            ["ABCDE", "BBCDE"],
+            ["", "", "", "", ""],
+            [],
+            [("A", 2)],
             ["ABCDE"],
         ],
     ],
