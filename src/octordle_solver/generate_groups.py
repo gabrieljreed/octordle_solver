@@ -223,7 +223,7 @@ def get_best_word_groups(remaining_words: list[str], verbose=False) -> tuple[Opt
     return best_group, best_word
 
 
-def process_word(word, remaining_words):
+def process_word(word, remaining_words) -> tuple[str, list[Group]]:
     groups = generate_groups(word, remaining_words)
     return word, groups
 
