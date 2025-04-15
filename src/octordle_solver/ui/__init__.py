@@ -1,3 +1,4 @@
+import pyperclip
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtCore import Qt
 from functools import partial
@@ -182,6 +183,8 @@ class WordleSolver(QtWidgets.QMainWindow):
         self.remaining_words_widget.layout().addWidget(self.remaining_words_label)
 
         self.remaining_words_list = QtWidgets.QListWidget()
+        self.remaining_words_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.remaining_words_list.customContextMenuRequested.connect(self.show_remaining_words_context_menu)
         self.remaining_words_widget.layout().addWidget(self.remaining_words_list)
 
         # Setup menu
@@ -455,6 +458,22 @@ class WordleSolver(QtWidgets.QMainWindow):
         self.average_group_label.setText(f"Average Group Size: {average_size:.1f}")
 
         self.setFocus()
+
+    def show_remaining_words_context_menu(self, point):
+        """Show a context menu for the remaining words list widget."""
+        menu = QtWidgets.QMenu(self)
+
+        if self.remaining_words_list.count():
+            copy_words_action = QtGui.QAction("Copy remaining words")
+            copy_words_action.triggered.connect(self.copy_remaining_words)
+            menu.addAction(copy_words_action)
+
+        menu.exec(self.remaining_words_list.mapToGlobal(point))
+
+    def copy_remaining_words(self):
+        """Copy the remaining words to the system clipboard."""
+        str_to_copy = "\n".join(self.remaining_words)
+        pyperclip.copy(str_to_copy)
 
     def show_best_guess_context_menu(self, point):
         """Show a context menu for the best guess list widget."""
