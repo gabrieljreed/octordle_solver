@@ -363,7 +363,8 @@ def get_all_answer_possibilities(remaining_words: list[str], valid_guesses: Opti
         all_possibilities = [AnswerPossibility(word, groups)]
 
     # FIXME: This probably has a lot of duplicates in it
-    words = remaining_words + dictionary.words
+    # words = remaining_words + dictionary.words
+    words = dictionary.words
 
     with concurrent.futures.ProcessPoolExecutor() as executor:
         futures = {executor.submit(process_word, word, remaining_words): word for word in words}
