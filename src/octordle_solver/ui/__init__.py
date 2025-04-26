@@ -2,9 +2,11 @@ import pyperclip
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtCore import Qt
 from functools import partial
-from typing import Optional
+from typing import Iterable, Optional
 
 from octordle_solver.generate_groups import get_all_answer_possibilities, get_best_second_guess
+from octordle_solver.utils import sanitize_words
+from solver import STARTING_GUESS
 
 from ..solver import filter_words
 from ..dictionary import dictionary
@@ -117,6 +119,62 @@ class HelpDialog(QtWidgets.QDialog):
         layout.addWidget(close_button)
 
 
+class CompareToWordleBotDialog(QtWidgets.QDialog):
+    def __init__(self, parent: Optional[QtWidgets.QWidget] = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Compare to Wordle Bot")
+
+        layout = QtWidgets.QVBoxLayout(self)
+
+        self.text_edit = QtWidgets.QTextEdit(self)
+        layout.addWidget(self.text_edit)
+
+        self.button_box = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel, self
+        )
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        layout.addWidget(self.button_box)
+
+    def get_words(self) -> list[str]:
+        return self.text_edit.toPlainText().split("\n")
+
+
+class DiffDialog(QtWidgets.QDialog):
+    def __init__(
+        self,
+        extra_words: Iterable[str],
+        missing_words: Iterable[str],
+        parent: Optional[QtWidgets.QWidget] = None,
+    ) -> None:
+        super().__init__(parent)
+
+        self.setWindowTitle("Diff View")
+
+        layout = QtWidgets.QVBoxLayout(self)
+
+        list_layout = QtWidgets.QHBoxLayout(self)
+        layout.addLayout(list_layout)
+
+        extra_words_layout = QtWidgets.QVBoxLayout(self)
+        list_layout.addLayout(extra_words_layout)
+        extra_words_layout.addWidget(QtWidgets.QLabel("Extra Words"))
+        extra_words_list = QtWidgets.QListWidget(self)
+        extra_words_list.addItems(extra_words)
+        extra_words_layout.addWidget(extra_words_list)
+
+        missing_words_layout = QtWidgets.QVBoxLayout(self)
+        list_layout.addLayout(missing_words_layout)
+        missing_words_layout.addWidget(QtWidgets.QLabel("Missing Words"))
+        missing_words_list = QtWidgets.QListWidget(self)
+        missing_words_list.addItems(missing_words)
+        missing_words_layout.addWidget(missing_words_list)
+
+        self.button_box = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok, self)
+        self.button_box.accepted.connect(self.accept)
+        layout.addWidget(self.button_box)
+
+
 class WordleSolver(QtWidgets.QMainWindow):
     """UI to solve Wordle puzzles."""
 
@@ -149,7 +207,7 @@ class WordleSolver(QtWidgets.QMainWindow):
         self.best_guess_widget.layout().addWidget(QtWidgets.QLabel("Best guesses"))
 
         self.best_guess_list = QtWidgets.QListWidget()
-        self.best_guess_list.addItem("CRANE")
+        self.best_guess_list.addItem(STARTING_GUESS)
         self.best_guess_list.itemSelectionChanged.connect(self.update_groups_widgets)
         self.best_guess_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.best_guess_list.customContextMenuRequested.connect(self.show_best_guess_context_menu)
@@ -247,7 +305,7 @@ class WordleSolver(QtWidgets.QMainWindow):
         self._create_grid()
 
         self.best_guess_list.clear()
-        self.best_guess_list.addItem("CRANE")
+        self.best_guess_list.addItem(STARTING_GUESS)
         self.groups_tree_widget.clear()
 
         self.update_remaining_words_widget()
@@ -361,8 +419,8 @@ class WordleSolver(QtWidgets.QMainWindow):
         self.best_guess_list.clear()
         self.groups_tree_widget.clear()
 
-        # If it's the first guess, get the cached best second guess (if the first guess was "CRANE")
-        if self._current_row == 1 and self.guessed_word == "CRANE":
+        # If it's the first guess, get the cached best second guess (if the first guess was STARTING_GUESS)
+        if self._current_row == 1 and self.guessed_word == STARTING_GUESS:
             answer_possibility = []
             for i in range(5):
                 current_box = self.letter_boxes[0][i]
@@ -468,12 +526,32 @@ class WordleSolver(QtWidgets.QMainWindow):
             copy_words_action.triggered.connect(self.copy_remaining_words)
             menu.addAction(copy_words_action)
 
+            compare_to_wordle_bot_action = QtGui.QAction("Compare to Wordle Bot")
+            compare_to_wordle_bot_action.triggered.connect(self.compare_to_wordle_bot)
+            menu.addAction(compare_to_wordle_bot_action)
+
         menu.exec(self.remaining_words_list.mapToGlobal(point))
 
     def copy_remaining_words(self):
         """Copy the remaining words to the system clipboard."""
         str_to_copy = "\n".join(self.remaining_words)
         pyperclip.copy(str_to_copy)
+
+    def compare_to_wordle_bot(self):
+        # Launch a dialog to get the words from wordle bot
+        compare_dialog = CompareToWordleBotDialog()
+        if not compare_dialog.exec_():
+            return
+
+        # Diff the words
+        wordle_bot_remaining_words = set(sanitize_words(compare_dialog.get_words()))
+        remaining_words_set = set(self.remaining_words)
+        extra_words = remaining_words_set - wordle_bot_remaining_words
+        missing_words = wordle_bot_remaining_words - remaining_words_set
+
+        # Show the user the diff
+        diff_dialog = DiffDialog(extra_words, missing_words, parent=self)
+        diff_dialog.show()
 
     def show_best_guess_context_menu(self, point):
         """Show a context menu for the best guess list widget."""

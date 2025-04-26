@@ -9,3 +9,13 @@ def clear_screen():
         os.system("cls")
     else:
         os.system("clear")
+
+
+def sanitize_words(words: list[str]):
+    sanitized_words = []
+
+    for word in words:
+        sanitized_words.append(word.upper())
+    sanitized_words.sort()
+
+    return sanitized_words
