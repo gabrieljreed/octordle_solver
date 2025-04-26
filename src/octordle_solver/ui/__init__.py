@@ -5,17 +5,14 @@ from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtCore import Qt
 from functools import partial
 from typing import Iterable, Optional
-
-from octordle_solver.generate_groups import get_all_answer_possibilities, get_cached_best_second_guess
-from octordle_solver.utils import sanitize_words
-from solver import STARTING_GUESS
+from enum import Enum
 
 from ..solver import filter_words
 from ..dictionary import dictionary
 from .threading import ThreadWorker
-from ..generate_groups import PossibilityState
-
-from enum import Enum
+from ..generate_groups import PossibilityState, get_all_answer_possibilities, get_cached_best_second_guess
+from ..utils import sanitize_words
+from ..constants import STARTING_GUESS
 
 
 class Color(Enum):
