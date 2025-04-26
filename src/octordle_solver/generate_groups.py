@@ -41,10 +41,6 @@ class PossibilityState(Enum):
 class Possibility:
     """A class to represent the possibility of each letter in a word."""
 
-    CORRECT = 0
-    MISPLACED = 1
-    INCORRECT = 2
-
     def __init__(self, p1: int, p2: int, p3: int, p4: int, p5: int):
         """Initialize the possibility.
 
@@ -132,32 +128,19 @@ def evaluate_game_state(word, possibility, other_word) -> bool:
     for i, letter in enumerate(other_word):
         letter = word[i]
         other_letter = other_word[i]
-        if possibility[i] == Possibility.CORRECT:
+        if possibility[i] == PossibilityState.CORRECT.value:
             if letter != other_letter:
                 return False
-        elif possibility[i] == Possibility.MISPLACED:
+        elif possibility[i] == PossibilityState.MISPLACED.value:
             if letter == other_letter:
                 return False
             if letter not in other_word:
                 return False
-        elif possibility[i] == Possibility.INCORRECT:
+        else:  # PossibilityState.INCORRECT
             if letter in other_word:
                 return False
 
     return True
-
-
-def _generate_all_possibilities() -> list[Possibility]:
-    """Generate all possibilities.
-
-    Returns:
-        list[Possibility]: The list of all possibilities.
-    """
-    possibilities = []
-    for possibility in itertools.product([0, 1, 2], repeat=5):
-        possibilities.append(Possibility(*possibility))
-
-    return possibilities
 
 
 def generate_groups(given_word: str, remaining_words: list[str]) -> list[Group]:
@@ -280,7 +263,7 @@ def get_best_word_groups_parallel(remaining_words: list[str], verbose=False):
     best_word = None
 
     if len(remaining_words) == 1:
-        return [Group(remaining_words, Possibility(0, 0, 0, 0, 0))], remaining_words[0]
+        return [Group(remaining_words, [0, 0, 0, 0, 0])], remaining_words[0]
 
     # TODO: if there are 2 or fewer words, just return the first word
 
