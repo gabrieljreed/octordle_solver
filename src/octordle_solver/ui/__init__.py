@@ -500,7 +500,7 @@ class WordleSolver(QtWidgets.QMainWindow):
         index = self.best_guess_list.currentRow()
         groups = self.possibilities[index].groups
 
-        def get_word_colors(possibility) -> list[str]:
+        def get_word_colors(possibility) -> list[Color]:
             colors = []
 
             for result in possibility:
@@ -519,7 +519,7 @@ class WordleSolver(QtWidgets.QMainWindow):
                 styled_text += f'<span style="color: #{color.value}; font-weight: bold;">{letter}</span>'
             return styled_text
 
-        def create_colored_label(text, colors):
+        def create_colored_label(text, colors: list[Color]):
             """Create a QLabel with colored letters."""
             label = QtWidgets.QLabel()
             label.setText(style_text(text, colors))

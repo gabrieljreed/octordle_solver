@@ -57,8 +57,8 @@ if __name__ == "__main__":
             print(f"No possible words for {possibility}")
             continue
         possibility_key = ""
-        for letter in possibility:
-            possibility_key += str(letter)
+        for letter_possibility in possibility:
+            possibility_key += str(letter_possibility)
         best_second_guesses[possibility_key] = guesses[0].word
         print(possibility_key, guesses[0].word)
 

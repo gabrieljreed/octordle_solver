@@ -1,5 +1,6 @@
 """Count letter frequencies."""
 
+from pathlib import Path
 from pprint import pprint
 
 
@@ -70,10 +71,10 @@ def sort_output_dict(output_dict: dict) -> list[tuple]:
 
 
 if __name__ == "__main__":
-    input_file = "5_letter_words_spellchecked.txt"
+    input_file = Path(__file__).parent / "5_letter_words_spellchecked.txt"
     words = []
-    with open(input_file, "r") as input_file:
-        words = input_file.read().split()
+    with open(input_file, "r") as f:
+        words = f.read().split()
 
     frequencies = count_frequencies_by_position(words)
     pprint(frequencies)

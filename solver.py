@@ -25,7 +25,7 @@ def show_help():
 if __name__ == "__main__":
     clear_screen()
 
-    guessed_words = []
+    guessed_words: list[str] = []
     best_guess = STARTING_GUESS
     all_words = dictionary.words.copy()
     remaining_words = dictionary.words.copy()

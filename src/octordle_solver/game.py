@@ -3,7 +3,7 @@
 import os
 import random
 from enum import Enum
-from typing import List, Optional, Tuple
+from typing import List, Optional, Set, Tuple
 
 from colorama import Back, Fore, Style
 
@@ -27,13 +27,13 @@ class Game:
         else:
             self.word = word
 
-        self.guessed_letters = set()
-        self.guessed_words = []
+        self.guessed_letters: Set[str] = set()
+        self.guessed_words: list[str] = []
         self.num_tries = 6
 
-        self.correct_letters = ["", "", "", "", ""]
-        self.misplaced_letters = []
-        self.incorrect_letters = []
+        self.correct_letters: list[str] = ["", "", "", "", ""]
+        self.misplaced_letters: list[tuple[str, int]] = []
+        self.incorrect_letters: list[str] = []
 
         self.remaining_words = self.dictionary.words.copy()
 

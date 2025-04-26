@@ -6,9 +6,9 @@ from octordle_solver.solver import filter_plurals, filter_words
 
 if __name__ == "__main__":
     dictionary = Dictionary()
-    correct_letters = ["", "", "", "", ""]
-    misplaced_letters = []
-    incorrect_letters = []
+    correct_letters: list[str] = ["", "", "", "", ""]
+    misplaced_letters: list[tuple[str, int]] = []
+    incorrect_letters: list[str] = []
 
     no_plurals = filter_plurals(dictionary.words)
 
