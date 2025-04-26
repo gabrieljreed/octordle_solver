@@ -1,11 +1,15 @@
-from utils import clear_screen
-from octordle_solver.game import Game
-from octordle_solver.generate_groups import get_best_word_groups, get_best_word_groups_parallel
-from octordle_solver.constants import STARTING_GUESS
-from octordle_solver.solver import filter_words
-from time import time
 import sys
+from time import time
 
+from utils import clear_screen
+
+from octordle_solver.constants import STARTING_GUESS
+from octordle_solver.game import Game
+from octordle_solver.generate_groups import (
+    get_best_word_groups,
+    get_best_word_groups_parallel,
+)
+from octordle_solver.solver import filter_words
 
 if __name__ == "__main__":
     game = Game("PRIMP", clear_screen=False)

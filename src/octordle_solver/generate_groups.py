@@ -1,16 +1,15 @@
 """Utils to generate groups of words."""
 
-from enum import Enum
-import itertools
-from typing import Optional
 import concurrent.futures
+import itertools
+import json
+from enum import Enum
+from pathlib import Path
+from typing import Optional
 
 from colorama import Back, Style
 
 from .dictionary import dictionary
-from pathlib import Path
-import json
-
 
 SECOND_GUESS_PATH = Path(__file__).parent / "data" / "best_second_guesses.json"
 with open(SECOND_GUESS_PATH, "r") as f:

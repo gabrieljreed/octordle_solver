@@ -1,5 +1,6 @@
-from octordle_solver.solver import filter_words
 import pytest
+
+from octordle_solver.solver import filter_words
 
 
 @pytest.mark.parametrize(

@@ -8,8 +8,8 @@ from typing import List, Optional, Tuple
 from colorama import Back, Fore, Style
 
 from .dictionary import Dictionary
-from .utils import clear_screen
 from .solver import filter_words
+from .utils import clear_screen
 
 
 class Game:

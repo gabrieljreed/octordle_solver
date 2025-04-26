@@ -1,18 +1,23 @@
 """UI for solving Wordle puzzles."""
 
-import pyperclip
-from PySide6 import QtWidgets, QtCore, QtGui
-from PySide6.QtCore import Qt
+from enum import Enum
 from functools import partial
 from typing import Iterable, Optional
-from enum import Enum
 
-from ..solver import filter_words
-from ..dictionary import dictionary
-from .threading import ThreadWorker
-from ..generate_groups import PossibilityState, get_all_answer_possibilities, get_cached_best_second_guess
-from ..utils import sanitize_words
+import pyperclip
+from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6.QtCore import Qt
+
 from ..constants import STARTING_GUESS
+from ..dictionary import dictionary
+from ..generate_groups import (
+    PossibilityState,
+    get_all_answer_possibilities,
+    get_cached_best_second_guess,
+)
+from ..solver import filter_words
+from ..utils import sanitize_words
+from .threading import ThreadWorker
 
 
 class Color(Enum):

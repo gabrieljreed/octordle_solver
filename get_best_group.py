@@ -1,8 +1,11 @@
 from octordle_solver.dictionary import Dictionary
-from octordle_solver.generate_groups import get_best_word_groups, print_group_info, get_best_word_groups_parallel
+from octordle_solver.generate_groups import (
+    get_best_word_groups,
+    get_best_word_groups_parallel,
+    print_group_info,
+)
 from octordle_solver.solver import filter_words
 from octordle_solver.utils import clear_screen
-
 
 if __name__ == "__main__":
     remaining_words = Dictionary().words.copy()

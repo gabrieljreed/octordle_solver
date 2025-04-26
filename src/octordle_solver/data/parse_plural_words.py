@@ -1,6 +1,7 @@
 """Parse plural words out of the valid answers."""
 
 from pathlib import Path
+
 import enchant
 
 file = Path(__file__).parent / "data" / "5_letter_words_spellchecked.txt"

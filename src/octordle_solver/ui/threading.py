@@ -1,9 +1,9 @@
 """Threading UI utilities."""
 
-from PySide6 import QtCore
-
-import traceback
 import sys
+import traceback
+
+from PySide6 import QtCore
 
 
 class WorkerSignals(QtCore.QObject):

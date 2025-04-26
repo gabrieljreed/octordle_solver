@@ -1,12 +1,12 @@
 """Compute the best second guess for all answer possibilities."""
 
+import itertools
+import json
+from pathlib import Path
+
+from octordle_solver.dictionary import dictionary
 from octordle_solver.generate_groups import get_all_answer_possibilities
 from octordle_solver.solver import filter_words
-from octordle_solver.dictionary import dictionary
-import itertools
-from pathlib import Path
-import json
-
 
 output_file = Path(__file__).parent / "best_second_guesses.json"
 output_file.touch()
