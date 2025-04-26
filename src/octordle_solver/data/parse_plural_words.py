@@ -1,3 +1,5 @@
+"""Parse plural words out of the valid answers."""
+
 from pathlib import Path
 import enchant
 

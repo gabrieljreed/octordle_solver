@@ -1,3 +1,5 @@
+"""Wordle Clone."""
+
 import os
 import random
 from enum import Enum
@@ -5,13 +7,14 @@ from typing import List, Optional, Tuple
 
 from colorama import Back, Fore, Style
 
-from .constants import TileState
 from .dictionary import Dictionary
 from .utils import clear_screen
 from .solver import filter_words
 
 
 class Game:
+    """Game class for Wordle Clone."""
+
     def __init__(self, word: Optional[str] = None, clear_screen: bool = True) -> None:
         """Initialize the game.
 
@@ -38,6 +41,7 @@ class Game:
         self._clear_screen = clear_screen
 
     def __str__(self) -> str:
+        """Return a string representation of the game state."""
         return f"Word: {self.word}\nCorrect: {self.correct_letters}\nMisplaced: {self.misplaced_letters}\nIncorrect: {self.incorrect_letters}\nRemaining words: {len(self.remaining_words)}"
 
     def guess(self, word: str) -> None:
@@ -84,6 +88,7 @@ class Game:
         print(output_string)
 
     def play(self) -> None:
+        """Play the game."""
         while True:
             self.remaining_words = filter_words(
                 self.remaining_words, self.correct_letters, self.misplaced_letters, self.incorrect_letters

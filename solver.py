@@ -1,3 +1,5 @@
+"""Command line Wordle solver."""
+
 from colorama import Back, Style
 
 from octordle_solver.dictionary import dictionary
@@ -14,6 +16,7 @@ STARTING_GUESS = "CRANE"
 
 
 def show_help():
+    """Show help options."""
     print("q\t\t Quit the program")
     print("?\t\t Show help")
     print("g\t\t Show group information")

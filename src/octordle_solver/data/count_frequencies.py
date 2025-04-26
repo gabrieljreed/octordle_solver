@@ -1,7 +1,11 @@
+"""Count letter frequencies."""
+
 from pprint import pprint
 
 
 def generate_alphabet_count_dict() -> dict:
+    """Generate a default dictionary for the alphabet."""
+    # TODO: Could replace this with defaultdict
     return {
         "a": 0,
         "b": 0,
@@ -61,6 +65,7 @@ def count_frequencies_by_position(words: list) -> dict:
 
 
 def sort_output_dict(output_dict: dict) -> list[tuple]:
+    """Sort the output dictionary."""
     return [(k, v) for k, v in sorted(output_dict.items(), key=lambda item: item[1], reverse=True)]
 
 

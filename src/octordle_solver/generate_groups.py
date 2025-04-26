@@ -1,6 +1,8 @@
+"""Utils to generate groups of words."""
+
+from enum import Enum
 import itertools
 from typing import Optional
-import numpy as np
 import concurrent.futures
 
 from colorama import Back, Style
@@ -15,7 +17,12 @@ with open(SECOND_GUESS_PATH, "r") as f:
     best_second_guesses = json.load(f)
 
 
-def get_best_second_guess(answer_possibility) -> Optional[str]:
+def get_cached_best_second_guess(answer_possibility: list[int]) -> Optional[str]:
+    """Get the cached best second guess for the given answer possibility.
+
+    Args:
+        answer_possibility (list[int]): Answer Possibility
+    """
     possibility_key = ""
     for i in answer_possibility:
         possibility_key += str(i)
@@ -23,11 +30,13 @@ def get_best_second_guess(answer_possibility) -> Optional[str]:
     return best_second_guesses.get(possibility_key)
 
 
-class GameState:
-    def __init__(self):
-        self.correct_letters = ["", "", "", "", ""]
-        self.misplaced_letters = []
-        self.incorrect_letters = []
+class PossibilityState(Enum):
+    """Enum representing the state of a letter in a Possibility."""
+
+    INVALID = -1
+    CORRECT = 0
+    MISPLACED = 1
+    INCORRECT = 2
 
 
 class Possibility:
@@ -50,28 +59,41 @@ class Possibility:
         self.positions = [p1, p2, p3, p4, p5]
 
     def __getitem__(self, index: int) -> int:
+        """Get the item."""
         return self.positions[index]
 
 
 class Group:
+    """Class to represent a group of words for a given possibility."""
+
     def __init__(self, words: list[str], possibility):
+        """Initialize the Group.
+
+        Args:
+            words (list[str]): List of words in the group.
+            possibility (): The answer possibility
+        """
         self.words: list[str] = words
         self.possibility = possibility
 
     def __str__(self):
+        """Return the string representation of the group."""
         result = str(self.possibility)
         for word in self.words:
             result += f"\n\t{word}"
         return result
 
     def __repr__(self) -> str:
+        """Return the string representation of the group."""
         return self.__str__()
 
     def __bool__(self):
+        """Boolean override."""
         return bool(self.words)
 
 
 def pretty_print_group(group: Group, word: str):
+    """Print a group in a nice format."""
     output_string = ""
     for i, letter in enumerate(word):
         if group.possibility[i] == 0:
@@ -162,22 +184,6 @@ def generate_groups(given_word: str, remaining_words: list[str]) -> list[Group]:
     return groups
 
 
-def generate_groups_np(given_word: str, remaining_words: list[str]) -> list[Group]:
-    all_possibilities = np.array(list(itertools.product([0, 1, 2], repeat=5)))
-    remaining_words = np.array(remaining_words)
-    groups = []
-
-    for possibility in all_possibilities:
-        mask = np.array([evaluate_game_state(given_word, possibility, word) for word in remaining_words])
-        group_words = remaining_words[mask]
-        if len(group_words) > 0:
-            groups.append(Group(group_words, possibility))
-
-    groups.sort(key=lambda group: len(group.words), reverse=True)
-
-    return groups
-
-
 def get_best_word_groups(remaining_words: list[str], verbose=False) -> tuple[Optional[list[Group]], Optional[str]]:
     """Get the best word to guess by generating groups.
 
@@ -193,7 +199,6 @@ def get_best_word_groups(remaining_words: list[str], verbose=False) -> tuple[Opt
     best_word = None
     for word in dictionary.words.copy():
         groups = generate_groups(word, remaining_words)
-        # groups = generate_groups_np(word, remaining_words)
         if best_group is None:
             best_group = groups
             best_word = word
@@ -224,16 +229,21 @@ def get_best_word_groups(remaining_words: list[str], verbose=False) -> tuple[Opt
 
 
 def process_word(word, remaining_words) -> tuple[str, list[Group]]:
+    """Generate groups for a given word and list of remaining words."""
     groups = generate_groups(word, remaining_words)
     return word, groups
 
 
 class AnswerPossibility:
+    """Class representing a possible answer."""
+
     def __init__(self, word: str, groups: list[Group]):
+        """Initialize the AnswerPossibility."""
         self.word = word
         self.groups = groups
 
     def __str__(self):
+        """Return a string representation of the AnswerPossibility."""
         result = (
             f"{self.word}: {len(self.groups)} groups, largest group {max(len(group.words) for group in self.groups)}"
         )

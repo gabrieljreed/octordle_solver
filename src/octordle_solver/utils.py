@@ -11,7 +11,15 @@ def clear_screen():
         os.system("clear")
 
 
-def sanitize_words(words: list[str]):
+def sanitize_words(words: list[str]) -> list[str]:
+    """Capitalize and sort words.
+
+    Args:
+        list[str]: The words to sanitize.
+
+    Returns:
+        list[str]: The sanitized words
+    """
     sanitized_words = []
 
     for word in words:

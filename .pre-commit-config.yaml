@@ -16,3 +16,8 @@ repos:
     hooks:
     -   id: black
         args: ["--config=.black"]
+-   repo: https://github.com/PyCQA/pydocstyle
+    rev: 6.1.1
+    hooks:
+    -   id: pydocstyle
+        files: "^src/.*"

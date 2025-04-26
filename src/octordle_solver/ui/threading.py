@@ -1,3 +1,5 @@
+"""Threading UI utilities."""
+
 from PySide6 import QtCore
 
 import traceback

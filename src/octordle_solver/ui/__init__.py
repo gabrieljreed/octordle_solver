@@ -1,16 +1,19 @@
+"""UI for solving Wordle puzzles."""
+
 import pyperclip
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtCore import Qt
 from functools import partial
 from typing import Iterable, Optional
 
-from octordle_solver.generate_groups import get_all_answer_possibilities, get_best_second_guess
+from octordle_solver.generate_groups import get_all_answer_possibilities, get_cached_best_second_guess
 from octordle_solver.utils import sanitize_words
 from solver import STARTING_GUESS
 
 from ..solver import filter_words
 from ..dictionary import dictionary
 from .threading import ThreadWorker
+from ..generate_groups import PossibilityState
 
 from enum import Enum
 
@@ -82,9 +85,23 @@ class LetterWidget(QtWidgets.QLabel):
         """
         )
 
+    @property
+    def state(self) -> PossibilityState:
+        """Return the state of the tile."""
+        if self.current_color == Color.GREEN:
+            return PossibilityState.CORRECT
+        elif self.current_color == Color.YELLOW:
+            return PossibilityState.MISPLACED
+        elif self.current_color == Color.GRAY:
+            return PossibilityState.INCORRECT
+        return PossibilityState.INVALID
+
 
 class HelpDialog(QtWidgets.QDialog):
+    """Dialog to show help to the user."""
+
     def __init__(self, parent: Optional[QtWidgets.QWidget] = None) -> None:
+        """Initialize the HelpDialog."""
         super().__init__(parent)
         self.setWindowTitle("How to use the Solver")
 
@@ -120,7 +137,10 @@ class HelpDialog(QtWidgets.QDialog):
 
 
 class CompareToWordleBotDialog(QtWidgets.QDialog):
+    """Dialog to let the user compare remaining words to the Wordle Bot."""
+
     def __init__(self, parent: Optional[QtWidgets.QWidget] = None) -> None:
+        """Initialize the dialog."""
         super().__init__(parent)
         self.setWindowTitle("Compare to Wordle Bot")
 
@@ -137,16 +157,29 @@ class CompareToWordleBotDialog(QtWidgets.QDialog):
         layout.addWidget(self.button_box)
 
     def get_words(self) -> list[str]:
+        """Get the user-entered words.
+
+        Returns:
+            list[str]: The words the user entered, split by line.
+        """
         return self.text_edit.toPlainText().split("\n")
 
 
 class DiffDialog(QtWidgets.QDialog):
+    """Dialog to show the diff between the remaining words and the Wordle Bot."""
+
     def __init__(
         self,
         extra_words: Iterable[str],
         missing_words: Iterable[str],
         parent: Optional[QtWidgets.QWidget] = None,
     ) -> None:
+        """Initialize the dialog.
+
+        Args:
+            extra_words (Iterable[str]): Extra words not included in Wordle Bot.
+            missing_words (Iterable[str]): Missing words not included in remaining words.
+        """
         super().__init__(parent)
 
         self.setWindowTitle("Diff View")
@@ -282,6 +315,7 @@ class WordleSolver(QtWidgets.QMainWindow):
         self.setFocus()
 
     def show_help_dialog(self):
+        """Show the help dialog."""
         dialog = HelpDialog(self)
         dialog.show()
 
@@ -312,6 +346,7 @@ class WordleSolver(QtWidgets.QMainWindow):
         self.setFocus()
 
     def debug(self):
+        """Print debug values."""
         print(f"{self._current_row = }")
         print(f"{self._current_col = }")
 
@@ -382,9 +417,9 @@ class WordleSolver(QtWidgets.QMainWindow):
                 current_box = self.letter_boxes[row][col]
                 letter = current_box.text()
                 word += letter
-                if current_box.current_color == Color.GRAY:
+                if current_box.state == PossibilityState.INCORRECT:
                     self.incorrect_letters.append(letter)
-                elif current_box.current_color == Color.YELLOW:
+                elif current_box.state == PossibilityState.MISPLACED:
                     self.misplaced_letters.append((letter, col))
                 else:
                     self.correct_letters[col] = letter
@@ -421,17 +456,12 @@ class WordleSolver(QtWidgets.QMainWindow):
 
         # If it's the first guess, get the cached best second guess (if the first guess was STARTING_GUESS)
         if self._current_row == 1 and self.guessed_word == STARTING_GUESS:
-            answer_possibility = []
+            answer_possibility: list[int] = []
             for i in range(5):
                 current_box = self.letter_boxes[0][i]
-                if current_box.current_color == Color.GREEN:
-                    answer_possibility.append(0)
-                elif current_box.current_color == Color.YELLOW:
-                    answer_possibility.append(1)
-                elif current_box.current_color == Color.GRAY:
-                    answer_possibility.append(2)
+                answer_possibility.append(current_box.state.value)
 
-            best_second_guess = get_best_second_guess(answer_possibility)
+            best_second_guess = get_cached_best_second_guess(answer_possibility)
             if best_second_guess:
                 self.best_guess_list.addItem(best_second_guess)
 
@@ -538,18 +568,16 @@ class WordleSolver(QtWidgets.QMainWindow):
         pyperclip.copy(str_to_copy)
 
     def compare_to_wordle_bot(self):
-        # Launch a dialog to get the words from wordle bot
+        """Launch a dialog to compare words to Wordle Bot."""
         compare_dialog = CompareToWordleBotDialog()
         if not compare_dialog.exec_():
             return
 
-        # Diff the words
         wordle_bot_remaining_words = set(sanitize_words(compare_dialog.get_words()))
         remaining_words_set = set(self.remaining_words)
         extra_words = remaining_words_set - wordle_bot_remaining_words
         missing_words = wordle_bot_remaining_words - remaining_words_set
 
-        # Show the user the diff
         diff_dialog = DiffDialog(extra_words, missing_words, parent=self)
         diff_dialog.show()
 
@@ -566,6 +594,7 @@ class WordleSolver(QtWidgets.QMainWindow):
         menu.exec(self.best_guess_list.mapToGlobal(point))
 
     def handle_best_guess_double_click(self, item):
+        """Handle the best guess double click action."""
         self.use_selected_guess(item.text())
 
     def use_selected_guess(self, guess):

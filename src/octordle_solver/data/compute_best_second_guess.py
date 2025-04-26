@@ -1,3 +1,5 @@
+"""Compute the best second guess for all answer possibilities."""
+
 from octordle_solver.generate_groups import get_all_answer_possibilities
 from octordle_solver.solver import filter_words
 from octordle_solver.dictionary import dictionary
