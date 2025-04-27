@@ -3,14 +3,16 @@
 import concurrent.futures
 import itertools
 import json
+from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 from colorama import Back, Style
 
 from .dictionary import dictionary
 
+CHUNK_SIZE = 10
 SECOND_GUESS_PATH = Path(__file__).parent / "data" / "best_second_guesses.json"
 with open(SECOND_GUESS_PATH, "r") as f:
     best_second_guesses = json.load(f)
@@ -85,6 +87,12 @@ class Group:
     def __bool__(self):
         """Boolean override."""
         return bool(self.words)
+
+    def __eq__(self, other: object) -> bool:
+        """Equality override."""
+        if not isinstance(other, Group):
+            return False
+        return self.words == other.words and self.possibility == other.possibility
 
 
 def pretty_print_group(group: Group, word: str):
@@ -166,6 +174,51 @@ def generate_groups(given_word: str, remaining_words: list[str]) -> list[Group]:
     return groups
 
 
+def generate_true_feedback(guess: str, answer: str) -> list[int]:
+    """Simulate Wordle feedback for a guess vs the real answer.
+
+    Args:
+        guess (str): The guessed word.
+        answer (str): The answer.
+
+    Returns:
+        (list[int]): A list of 5 integers.
+    """
+    feedback = [PossibilityState.INCORRECT.value] * 5
+    answer_chars: list[Union[None, str]] = list(answer)
+
+    for i in range(5):
+        if guess[i] == answer[i]:
+            feedback[i] = PossibilityState.CORRECT.value
+            answer_chars[i] = ""  # Mark as used
+
+    for i in range(5):
+        if feedback[i] == PossibilityState.INCORRECT.value and guess[i] in answer_chars:
+            feedback[i] = PossibilityState.MISPLACED.value
+            answer_chars[answer_chars.index(guess[i])] = ""  # Mark as used
+
+    return feedback
+
+
+def generate_groups_real_possibilities_only(given_word: str, remaining_words: list[str]):
+    """Generate groups.
+
+    Args:
+        given_word (str): The word to generate groups for.
+        remaining_words (list[str]): The words that are still valid answers.
+
+    Returns:
+        (list[Group]): List of groups generated.
+    """
+    groups = defaultdict(list)
+
+    for word in remaining_words:
+        feedback = tuple(generate_true_feedback(given_word, word))
+        groups[feedback].append(word)
+
+    return [Group(words, possibility) for possibility, words in groups.items()]
+
+
 def get_best_word_groups(remaining_words: list[str], verbose=False) -> tuple[Optional[list[Group]], Optional[str]]:
     """Get the best word to guess by generating groups.
 
@@ -212,8 +265,31 @@ def get_best_word_groups(remaining_words: list[str], verbose=False) -> tuple[Opt
 
 def process_word(word, remaining_words) -> tuple[str, list[Group]]:
     """Generate groups for a given word and list of remaining words."""
-    groups = generate_groups(word, remaining_words)
+    groups = generate_groups_real_possibilities_only(word, remaining_words)
     return word, groups
+
+
+def create_chunks(list_to_chunk: list, chunk_size: int):
+    """Create chunks from a given list."""
+    for i in range(0, len(list_to_chunk), chunk_size):
+        yield list_to_chunk[i : i + chunk_size]
+
+
+def process_word_batch(args) -> list[tuple[str, list[Group]]]:
+    """Generate groups for a given batch of words.
+
+    Args:
+        args (tuple): A tuple of the batch of words and the remaining words.
+
+    Returns:
+        list[tuple[str, list[Group]]]: List of results - tuples of the word and list of groups.
+    """
+    words_batch, remaining_words = args
+    batch_results = []
+    for word in words_batch:
+        groups = generate_groups_real_possibilities_only(word, remaining_words)
+        batch_results.append((word, groups))
+    return batch_results
 
 
 class AnswerPossibility:
@@ -345,14 +421,15 @@ def get_all_answer_possibilities(remaining_words: list[str], valid_guesses: Opti
         word, groups = process_word(remaining_words[0], remaining_words)
         all_possibilities = [AnswerPossibility(word, groups)]
 
-    # FIXME: This probably has a lot of duplicates in it
     words = remaining_words + dictionary.words
 
+    batches = list(create_chunks(words, CHUNK_SIZE))
+
     with concurrent.futures.ProcessPoolExecutor() as executor:
-        futures = {executor.submit(process_word, word, remaining_words): word for word in words}
-        for future in concurrent.futures.as_completed(futures):
-            word, groups = future.result()
-            all_possibilities.append(AnswerPossibility(word, groups))
+        batch_args = [(batch, remaining_words) for batch in batches]
+        for batch_result in executor.map(process_word_batch, batch_args):
+            for word, groups in batch_result:
+                all_possibilities.append(AnswerPossibility(word, groups))
 
     all_possibilities.sort(reverse=True)
 
