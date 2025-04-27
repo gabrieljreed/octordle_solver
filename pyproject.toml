@@ -22,3 +22,6 @@ profile = "black"
 [project.urls]
 "Homepage" = "https://github.com/gabrieljreed/octordle_solver"
 "Bug Tracker" = "https://github.com/gabrieljreed/octordle_solver/issues"
+
+[project.scripts]
+wordle-solver = "octordle_solver.ui.launch_ui:main"
