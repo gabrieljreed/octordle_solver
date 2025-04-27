@@ -5,8 +5,8 @@ from octordle_solver.solver import (
     Group,
     create_chunks,
     filter_words,
-    generate_groups_real_possibilities_only,
-    generate_true_feedback,
+    generate_groups,
+    get_wordle_feedback,
 )
 
 
@@ -55,7 +55,7 @@ class TestGroup:
     ],
 )
 def test_generate_true_feedback(guess, answer, expected):
-    assert generate_true_feedback(guess, answer) == expected
+    assert get_wordle_feedback(guess, answer) == expected
 
 
 @pytest.mark.parametrize(
@@ -74,7 +74,7 @@ def test_generate_true_feedback(guess, answer, expected):
     ],
 )
 def test_generate_groups_real_possibilities_only(given_word, remaining_words, expected):
-    assert generate_groups_real_possibilities_only(given_word, remaining_words) == expected
+    assert generate_groups(given_word, remaining_words) == expected
 
 
 def test_create_chunks():

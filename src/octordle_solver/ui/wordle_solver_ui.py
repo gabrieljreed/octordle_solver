@@ -13,7 +13,7 @@ from ..dictionary import dictionary
 from ..solver import (
     PossibilityState,
     filter_words,
-    get_all_answer_possibilities,
+    get_all_answers,
     get_cached_best_second_guess,
 )
 from ..utils import sanitize_words
@@ -468,7 +468,7 @@ class WordleSolver(QtWidgets.QMainWindow):
                 self.best_guess_list.addItem(best_second_guess)
 
         thread_worker = ThreadWorker(
-            fn=get_all_answer_possibilities,
+            fn=get_all_answers,
             remaining_words=self.remaining_words,
             valid_guesses=self.valid_guesses,
         )

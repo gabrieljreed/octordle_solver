@@ -17,6 +17,81 @@ with open(SECOND_GUESS_PATH, "r") as f:
     best_second_guesses = json.load(f)
 
 
+class PossibilityState(Enum):
+    """Enum representing the state of a letter in a Possibility."""
+
+    INVALID = -1
+    CORRECT = 0
+    MISPLACED = 1
+    INCORRECT = 2
+
+
+class Group:
+    """Class to represent a group of words for a given possibility."""
+
+    def __init__(self, words: list[str], possibility):
+        """Initialize the Group.
+
+        Args:
+            words (list[str]): List of words in the group.
+            possibility (): The answer possibility
+        """
+        self.words: list[str] = words
+        self.possibility = possibility
+
+    def __str__(self):
+        """Return the string representation of the group."""
+        result = str(self.possibility)
+        for word in self.words:
+            result += f"\n\t{word}"
+        return result
+
+    def __repr__(self) -> str:
+        """Return the string representation of the group."""
+        return self.__str__()
+
+    def __bool__(self):
+        """Boolean override."""
+        return bool(self.words)
+
+    def __eq__(self, other: object) -> bool:
+        """Equality override."""
+        if not isinstance(other, Group):
+            return False
+        return self.words == other.words and self.possibility == other.possibility
+
+
+class AnswerPossibility:
+    """Class representing a possible answer."""
+
+    def __init__(self, word: str, groups: list[Group]):
+        """Initialize the AnswerPossibility."""
+        self.word = word
+        self.groups = groups
+
+    def __str__(self):
+        """Return a string representation of the AnswerPossibility."""
+        result = (
+            f"{self.word}: {len(self.groups)} groups, largest group {max(len(group.words) for group in self.groups)}"
+        )
+        # TODO: Improve color printout here
+        for group in self.groups:
+            result += f"\n\t{group}"
+        return result
+
+    def __gt__(self, other):
+        """Overload > operator.
+
+        If the number of groups is the same, favor smaller groups. Otherwise, favor more groups.
+        """
+        if len(self.groups) == len(other.groups):
+            if len(self.groups) == 0:
+                return True
+            return max(len(group.words) for group in self.groups) < max(len(group.words) for group in other.groups)
+
+        return len(self.groups) > len(other.groups)
+
+
 def filter_words(
     words: list[str],
     correct_letters: list[str],
@@ -70,50 +145,6 @@ def get_cached_best_second_guess(answer_possibility: list[int]) -> Optional[str]
     return best_second_guesses.get(possibility_key)
 
 
-class PossibilityState(Enum):
-    """Enum representing the state of a letter in a Possibility."""
-
-    INVALID = -1
-    CORRECT = 0
-    MISPLACED = 1
-    INCORRECT = 2
-
-
-class Group:
-    """Class to represent a group of words for a given possibility."""
-
-    def __init__(self, words: list[str], possibility):
-        """Initialize the Group.
-
-        Args:
-            words (list[str]): List of words in the group.
-            possibility (): The answer possibility
-        """
-        self.words: list[str] = words
-        self.possibility = possibility
-
-    def __str__(self):
-        """Return the string representation of the group."""
-        result = str(self.possibility)
-        for word in self.words:
-            result += f"\n\t{word}"
-        return result
-
-    def __repr__(self) -> str:
-        """Return the string representation of the group."""
-        return self.__str__()
-
-    def __bool__(self):
-        """Boolean override."""
-        return bool(self.words)
-
-    def __eq__(self, other: object) -> bool:
-        """Equality override."""
-        if not isinstance(other, Group):
-            return False
-        return self.words == other.words and self.possibility == other.possibility
-
-
 def pretty_print_group(group: Group, word: str):
     """Print a group in a nice format."""
     output_string = ""
@@ -144,7 +175,7 @@ def print_group_info(groups: Optional[list[Group]], word: Optional[str]) -> None
     print(f"Largest group: {max(len(group.words) for group in groups)}")
 
 
-def generate_true_feedback(guess: str, answer: str) -> list[int]:
+def get_wordle_feedback(guess: str, answer: str) -> list[int]:
     """Simulate Wordle feedback for a guess vs the real answer.
 
     Args:
@@ -170,7 +201,7 @@ def generate_true_feedback(guess: str, answer: str) -> list[int]:
     return feedback
 
 
-def generate_groups_real_possibilities_only(given_word: str, remaining_words: list[str]):
+def generate_groups(given_word: str, remaining_words: list[str]):
     """Generate groups.
 
     Args:
@@ -183,16 +214,10 @@ def generate_groups_real_possibilities_only(given_word: str, remaining_words: li
     groups = defaultdict(list)
 
     for word in remaining_words:
-        feedback = tuple(generate_true_feedback(given_word, word))
+        feedback = tuple(get_wordle_feedback(given_word, word))
         groups[feedback].append(word)
 
     return [Group(words, possibility) for possibility, words in groups.items()]
-
-
-def process_word(word, remaining_words) -> tuple[str, list[Group]]:
-    """Generate groups for a given word and list of remaining words."""
-    groups = generate_groups_real_possibilities_only(word, remaining_words)
-    return word, groups
 
 
 def create_chunks(list_to_chunk: list, chunk_size: int):
@@ -213,51 +238,29 @@ def process_word_batch(args) -> list[tuple[str, list[Group]]]:
     words_batch, remaining_words = args
     batch_results = []
     for word in words_batch:
-        groups = generate_groups_real_possibilities_only(word, remaining_words)
+        groups = generate_groups(word, remaining_words)
         batch_results.append((word, groups))
     return batch_results
 
 
-class AnswerPossibility:
-    """Class representing a possible answer."""
+def get_all_answers(remaining_words: list[str], valid_guesses: Optional[list[str]] = None) -> list[AnswerPossibility]:
+    """Get all answer sorted best to worst.
 
-    def __init__(self, word: str, groups: list[Group]):
-        """Initialize the AnswerPossibility."""
-        self.word = word
-        self.groups = groups
+    Args:
+        remaining_words (list[str]): List of words words still possible given the game state.
+        valid_guesses (list[str], optional): Valid guesses to use. If not provided, will use dictionary.valid_guesses.
 
-    def __str__(self):
-        """Return a string representation of the AnswerPossibility."""
-        result = (
-            f"{self.word}: {len(self.groups)} groups, largest group {max(len(group.words) for group in self.groups)}"
-        )
-        # TODO: Improve color printout here
-        for group in self.groups:
-            result += f"\n\t{group}"
-        return result
-
-    def __gt__(self, other):
-        """Overload > operator.
-
-        If the number of groups is the same, favor smaller groups. Otherwise, favor more groups.
-        """
-        if len(self.groups) == len(other.groups):
-            if len(self.groups) == 0:
-                return True
-            return max(len(group.words) for group in self.groups) < max(len(group.words) for group in other.groups)
-
-        return len(self.groups) > len(other.groups)
-
-
-def get_all_answer_possibilities(remaining_words: list[str], valid_guesses: Optional[list[str]] = None):
-    """Like get_best_word_groups_parallel, but returns all possibilities."""
+    Returns:
+        (list[AnswerPossibility]): List of AnswerPossibility objects.
+    """
     if not valid_guesses:
         valid_guesses = dictionary.valid_guesses
 
     all_possibilities: list[AnswerPossibility] = []
 
     if len(remaining_words) == 1:
-        word, groups = process_word(remaining_words[0], remaining_words)
+        word = remaining_words[0]
+        groups = generate_groups(word, remaining_words)
         all_possibilities = [AnswerPossibility(word, groups)]
 
     words = remaining_words + dictionary.words
