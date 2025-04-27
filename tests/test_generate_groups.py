@@ -1,97 +1,13 @@
 import pytest
 
-from octordle_solver.generate_groups import (
+from octordle_solver.dictionary import dictionary
+from octordle_solver.solver import (
     Group,
-    Possibility,
-    PossibilityState,
     create_chunks,
-    evaluate_game_state,
-    generate_groups,
+    filter_words,
     generate_groups_real_possibilities_only,
     generate_true_feedback,
 )
-
-
-def test_possibility():
-    possibility = Possibility(0, 1, 2, 0, 0)
-    assert possibility[0] == 0
-    assert possibility[1] == 1
-    assert possibility[2] == 2
-
-
-@pytest.mark.parametrize(
-    "word, possibility, other_word, expected",
-    [
-        [
-            "ABCDE",
-            [0, 0, 0, 0, 0],
-            "ABCDE",
-            True,
-        ],
-        [
-            "ABCDE",
-            [0, 0, 0, 0, 2],
-            "ABCDZ",
-            True,
-        ],
-        [
-            "ABCDE",
-            [2, 0, 0, 0, 0],
-            "ABCDE",
-            False,
-        ],
-        [
-            "ABCDE",
-            [2, 0, 0, 0, 0],
-            "ZBCDE",
-            True,
-        ],
-        [
-            "ABCDE",
-            [0, 0, 0, 0, 0],
-            "ZBCDE",
-            False,
-        ],
-        [
-            "ABCDE",
-            [1, 2, 2, 2, 2],
-            "WXYZA",
-            True,
-        ],
-        [
-            "ABCDE",
-            [1, 2, 2, 2, 2],
-            "VWXYZ",
-            False,
-        ],
-        [
-            "ABCDE",
-            [1, 2, 2, 2, 2],
-            "AWXYZ",
-            False,
-        ],
-    ],
-    ids=[
-        "words are identical",
-        "word has incorrect letter",
-        "word has incorrect letter, other word matches",
-        "word has incorrect letter, other word does not match",
-        "word is correct, other word has incorrect letter",
-        "word has misplaced letter, other word has letter",
-        "word has misplaced letter, other word does not have letter",
-        "word has misplaced letter, other word has letter in same position",
-    ],
-)
-def test_evaluate_game_state(word, possibility, other_word, expected):
-    assert evaluate_game_state(word, possibility, other_word) == expected
-
-
-@pytest.mark.parametrize(
-    "word, remaining_words, expected",
-    [],
-)
-def test_generate_groups(word, remaining_words, expected):
-    assert generate_groups(word, remaining_words) == expected
 
 
 class TestGroup:
@@ -167,3 +83,65 @@ def test_create_chunks():
     assert chunks[0] == ["00", "01", "02", "03", "04", "05", "06", "07", "08", "09"]
     assert chunks[1] == ["10", "11", "12", "13", "14", "15", "16", "17", "18", "19"]
     assert chunks[2] == ["20", "21", "22"]
+
+
+@pytest.mark.parametrize(
+    "words, correct_letters, incorrect_letters, misplaced_letters, expected",
+    [
+        [[], [], [], [], []],
+        [
+            ["ABCDE", "BBCDE"],
+            ["", "", "", "", ""],
+            ["A"],
+            [],
+            ["BBCDE"],
+        ],
+        [
+            ["ABCDE", "BBCDE"],
+            ["A", "", "", "", ""],
+            [],
+            [],
+            ["ABCDE"],
+        ],
+        [
+            ["ABCDE", "BBCDE"],
+            ["", "", "", "", ""],
+            [],
+            [("A", 2)],
+            ["ABCDE"],
+        ],
+        [
+            ["ABCDE", "BBCDE"],
+            ["", "", "", "", ""],
+            [],
+            [("B", 0)],
+            ["ABCDE"],
+        ],
+        [
+            ["ABCDE", "BCDE"],
+            ["", "", "", "", ""],
+            [],
+            [],
+            ["ABCDE"],
+        ],
+        [
+            dictionary.words.copy(),
+            ["C", "L", "A", "", ""],
+            ["R", "N", "E", "F", "O", "P"],
+            [("S", 4)],
+            ["CLASH"],
+        ],
+    ],
+    ids=[
+        "all empty",
+        "incorrect letters",
+        "correct letters",
+        "misplaced letters",
+        "misplaced letters 2",
+        "word too short",
+        "full",
+    ],
+)
+def test_filter(words, correct_letters, incorrect_letters, misplaced_letters, expected):
+    result = filter_words(words, correct_letters, misplaced_letters, incorrect_letters)
+    assert result == expected

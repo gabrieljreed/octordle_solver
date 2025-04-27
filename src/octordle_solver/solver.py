@@ -1,71 +1,20 @@
-"""Count letter frequencies."""
+"""Solve Wordle puzzles."""
 
-from pprint import pprint
+import concurrent.futures
+import json
+from collections import defaultdict
+from enum import Enum
+from pathlib import Path
+from typing import Optional, Union
 
+from colorama import Back, Style
 
-def generate_alphabet_count_dict() -> dict:
-    """Generate a default dictionary for the alphabet."""
-    return {
-        "a": 0,
-        "b": 0,
-        "c": 0,
-        "d": 0,
-        "e": 0,
-        "f": 0,
-        "g": 0,
-        "h": 0,
-        "i": 0,
-        "j": 0,
-        "k": 0,
-        "l": 0,
-        "m": 0,
-        "n": 0,
-        "o": 0,
-        "p": 0,
-        "q": 0,
-        "r": 0,
-        "s": 0,
-        "t": 0,
-        "u": 0,
-        "v": 0,
-        "w": 0,
-        "x": 0,
-        "y": 0,
-        "z": 0,
-    }
+from .dictionary import dictionary
 
-
-def count_frequencies_overall(words: list) -> dict:
-    """Count the frequency of each letter in the words."""
-    output_dict = generate_alphabet_count_dict()
-    for word in words:
-        for letter in word:
-            if letter.isalpha():
-                output_dict[letter.lower()] += 1
-
-    return output_dict
-
-
-def count_frequencies_by_position(words: list) -> dict:
-    """Count the frequency of each letter in each position of the words."""
-    output_dict = {
-        0: generate_alphabet_count_dict(),
-        1: generate_alphabet_count_dict(),
-        2: generate_alphabet_count_dict(),
-        3: generate_alphabet_count_dict(),
-        4: generate_alphabet_count_dict(),
-    }
-    for word in words:
-        for i, letter in enumerate(word):
-            if letter.isalpha():
-                output_dict[i][letter.lower()] += 1
-
-    return output_dict
-
-
-def sort_output_dict(output_dict: dict) -> list[tuple]:
-    """Sort the output dictionary."""
-    return [(k, v) for k, v in sorted(output_dict.items(), key=lambda item: item[1], reverse=True)]
+CHUNK_SIZE = 10
+SECOND_GUESS_PATH = Path(__file__).parent / "data" / "best_second_guesses.json"
+with open(SECOND_GUESS_PATH, "r") as f:
+    best_second_guesses = json.load(f)
 
 
 def filter_words(
@@ -108,59 +57,219 @@ def filter_words(
     return filtered_words
 
 
-def filter_plurals(words: list[str]) -> list[str]:
-    """Filter out words that are plurals."""
-    return [word for word in words if not word.upper().endswith("S")]
+def get_cached_best_second_guess(answer_possibility: list[int]) -> Optional[str]:
+    """Get the cached best second guess for the given answer possibility.
+
+    Args:
+        answer_possibility (list[int]): Answer Possibility
+    """
+    possibility_key = ""
+    for i in answer_possibility:
+        possibility_key += str(i)
+
+    return best_second_guesses.get(possibility_key)
 
 
-if __name__ == "__main__":
-    from .dictionary import Dictionary
+class PossibilityState(Enum):
+    """Enum representing the state of a letter in a Possibility."""
 
-    dictionary = Dictionary()
-    correct_letters = ["", "", "A", "", ""]
-    misplaced_letters = [("E", 4), ("R", 1), ("Y", 1)]
-    incorrect_letters = ["C", "N", "S", "L", "P", "H"]
+    INVALID = -1
+    CORRECT = 0
+    MISPLACED = 1
+    INCORRECT = 2
 
-    filtered_words = filter_words(dictionary.words, correct_letters, misplaced_letters, incorrect_letters)
 
-    print(f"({len(filtered_words):04d}) filtered_words")
-    for obj in filtered_words:
-        print(obj)
+class Group:
+    """Class to represent a group of words for a given possibility."""
+
+    def __init__(self, words: list[str], possibility):
+        """Initialize the Group.
+
+        Args:
+            words (list[str]): List of words in the group.
+            possibility (): The answer possibility
+        """
+        self.words: list[str] = words
+        self.possibility = possibility
+
+    def __str__(self):
+        """Return the string representation of the group."""
+        result = str(self.possibility)
+        for word in self.words:
+            result += f"\n\t{word}"
+        return result
+
+    def __repr__(self) -> str:
+        """Return the string representation of the group."""
+        return self.__str__()
+
+    def __bool__(self):
+        """Boolean override."""
+        return bool(self.words)
+
+    def __eq__(self, other: object) -> bool:
+        """Equality override."""
+        if not isinstance(other, Group):
+            return False
+        return self.words == other.words and self.possibility == other.possibility
+
+
+def pretty_print_group(group: Group, word: str):
+    """Print a group in a nice format."""
+    output_string = ""
+    for i, letter in enumerate(word):
+        if group.possibility[i] == 0:
+            output_string += Back.GREEN + letter + Back.RESET
+        elif group.possibility[i] == 1:
+            output_string += Back.YELLOW + letter + Back.RESET
+        else:
+            output_string += Style.DIM + letter + Style.RESET_ALL
+    print(output_string)
+
+    for word in group.words:
+        print(word)
     print("---")
 
-    # frequencies = count_frequencies_by_position(filtered_words)
-    # pprint(frequencies)
-    # all_sorted_frequencies = {}
-    # for position, frequency in frequencies.items():
-    #     sorted_frequencies = sort_output_dict(frequency)
-    #     pprint(sorted_frequencies)
-    #     all_sorted_frequencies[position] = sorted_frequencies
 
-    frequencies = count_frequencies_overall(filtered_words)
-    result = sort_output_dict(frequencies)
-    # pprint(result)
+def print_group_info(groups: Optional[list[Group]], word: Optional[str]) -> None:
+    """Print information about the groups."""
+    if not groups or not word:
+        print("No groups found")
+        return
 
-    scored_words = {word: 0 for word in filtered_words}
-    i = 0
-    CUTOFF_VALUE = 100
-    for word in filtered_words:
-        i += 1
-        if i > CUTOFF_VALUE:
-            break
-        for letter in word:
-            scored_words[word] += frequencies[letter.lower()]
+    for group in groups:
+        pretty_print_group(group, word)
 
-    result = sort_output_dict(scored_words)
+    print(f"Num groups: {len(groups)}")
+    print(f"Largest group: {max(len(group.words) for group in groups)}")
 
-    pprint(result)
 
-    # Prune all words from the list that have duplicate letters
-    pruned_words = []
-    for word in filtered_words:
-        if len(set(word)) == 5:
-            pruned_words.append(word)
+def generate_true_feedback(guess: str, answer: str) -> list[int]:
+    """Simulate Wordle feedback for a guess vs the real answer.
 
-    print(f"({len(pruned_words):04d}) pruned_words")
-    for obj in pruned_words:
-        print(obj)
-    print("---")
+    Args:
+        guess (str): The guessed word.
+        answer (str): The answer.
+
+    Returns:
+        (list[int]): A list of 5 integers.
+    """
+    feedback = [PossibilityState.INCORRECT.value] * 5
+    answer_chars: list[Union[None, str]] = list(answer)
+
+    for i in range(5):
+        if guess[i] == answer[i]:
+            feedback[i] = PossibilityState.CORRECT.value
+            answer_chars[i] = ""  # Mark as used
+
+    for i in range(5):
+        if feedback[i] == PossibilityState.INCORRECT.value and guess[i] in answer_chars:
+            feedback[i] = PossibilityState.MISPLACED.value
+            answer_chars[answer_chars.index(guess[i])] = ""  # Mark as used
+
+    return feedback
+
+
+def generate_groups_real_possibilities_only(given_word: str, remaining_words: list[str]):
+    """Generate groups.
+
+    Args:
+        given_word (str): The word to generate groups for.
+        remaining_words (list[str]): The words that are still valid answers.
+
+    Returns:
+        (list[Group]): List of groups generated.
+    """
+    groups = defaultdict(list)
+
+    for word in remaining_words:
+        feedback = tuple(generate_true_feedback(given_word, word))
+        groups[feedback].append(word)
+
+    return [Group(words, possibility) for possibility, words in groups.items()]
+
+
+def process_word(word, remaining_words) -> tuple[str, list[Group]]:
+    """Generate groups for a given word and list of remaining words."""
+    groups = generate_groups_real_possibilities_only(word, remaining_words)
+    return word, groups
+
+
+def create_chunks(list_to_chunk: list, chunk_size: int):
+    """Create chunks from a given list."""
+    for i in range(0, len(list_to_chunk), chunk_size):
+        yield list_to_chunk[i : i + chunk_size]
+
+
+def process_word_batch(args) -> list[tuple[str, list[Group]]]:
+    """Generate groups for a given batch of words.
+
+    Args:
+        args (tuple): A tuple of the batch of words and the remaining words.
+
+    Returns:
+        list[tuple[str, list[Group]]]: List of results - tuples of the word and list of groups.
+    """
+    words_batch, remaining_words = args
+    batch_results = []
+    for word in words_batch:
+        groups = generate_groups_real_possibilities_only(word, remaining_words)
+        batch_results.append((word, groups))
+    return batch_results
+
+
+class AnswerPossibility:
+    """Class representing a possible answer."""
+
+    def __init__(self, word: str, groups: list[Group]):
+        """Initialize the AnswerPossibility."""
+        self.word = word
+        self.groups = groups
+
+    def __str__(self):
+        """Return a string representation of the AnswerPossibility."""
+        result = (
+            f"{self.word}: {len(self.groups)} groups, largest group {max(len(group.words) for group in self.groups)}"
+        )
+        # TODO: Improve color printout here
+        for group in self.groups:
+            result += f"\n\t{group}"
+        return result
+
+    def __gt__(self, other):
+        """Overload > operator.
+
+        If the number of groups is the same, favor smaller groups. Otherwise, favor more groups.
+        """
+        if len(self.groups) == len(other.groups):
+            if len(self.groups) == 0:
+                return True
+            return max(len(group.words) for group in self.groups) < max(len(group.words) for group in other.groups)
+
+        return len(self.groups) > len(other.groups)
+
+
+def get_all_answer_possibilities(remaining_words: list[str], valid_guesses: Optional[list[str]] = None):
+    """Like get_best_word_groups_parallel, but returns all possibilities."""
+    if not valid_guesses:
+        valid_guesses = dictionary.valid_guesses
+
+    all_possibilities: list[AnswerPossibility] = []
+
+    if len(remaining_words) == 1:
+        word, groups = process_word(remaining_words[0], remaining_words)
+        all_possibilities = [AnswerPossibility(word, groups)]
+
+    words = remaining_words + dictionary.words
+
+    batches = list(create_chunks(words, CHUNK_SIZE))
+
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        batch_args = [(batch, remaining_words) for batch in batches]
+        for batch_result in executor.map(process_word_batch, batch_args):
+            for word, groups in batch_result:
+                all_possibilities.append(AnswerPossibility(word, groups))
+
+    all_possibilities.sort(reverse=True)
+
+    return all_possibilities

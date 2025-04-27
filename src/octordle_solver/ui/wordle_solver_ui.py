@@ -10,12 +10,12 @@ from PySide6.QtCore import Qt
 
 from ..constants import STARTING_GUESS
 from ..dictionary import dictionary
-from ..generate_groups import (
+from ..solver import (
     PossibilityState,
+    filter_words,
     get_all_answer_possibilities,
     get_cached_best_second_guess,
 )
-from ..solver import filter_words
 from ..utils import sanitize_words
 from .threading import ThreadWorker
 
