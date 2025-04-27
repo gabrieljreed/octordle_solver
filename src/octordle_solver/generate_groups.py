@@ -3,9 +3,10 @@
 import concurrent.futures
 import itertools
 import json
+from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 from colorama import Back, Style
 
@@ -85,6 +86,12 @@ class Group:
     def __bool__(self):
         """Boolean override."""
         return bool(self.words)
+
+    def __eq__(self, other: object) -> bool:
+        """Equality override."""
+        if not isinstance(other, Group):
+            return False
+        return self.words == other.words and self.possibility == other.possibility
 
 
 def pretty_print_group(group: Group, word: str):
@@ -166,6 +173,54 @@ def generate_groups(given_word: str, remaining_words: list[str]) -> list[Group]:
     return groups
 
 
+def generate_true_feedback(guess: str, answer: str) -> list[int]:
+    """Simulate Wordle feedback for a guess vs the real answer.
+
+    Args:
+        guess (str): The guessed word.
+        answer (str): The answer.
+
+    Returns:
+        (list[int]): A list of 5 integers.
+    """
+    feedback = [PossibilityState.INCORRECT.value] * 5
+    answer_chars: list[Union[None, str]] = list(answer)
+
+    # TODO: See if I can combine this into one pass
+    # TODO: Maybe this is the best way to do it, but this should be part of the filter function
+    # TODO: Chunking
+    for i in range(5):
+        if guess[i] == answer[i]:
+            feedback[i] = PossibilityState.CORRECT.value
+            answer_chars[i] = ""  # Mark as used
+
+    for i in range(5):
+        if feedback[i] == PossibilityState.INCORRECT.value and guess[i] in answer_chars:
+            feedback[i] = PossibilityState.MISPLACED.value
+            answer_chars[answer_chars.index(guess[i])] = ""  # Mark as used
+
+    return feedback
+
+
+def generate_groups_real_possibilities_only(given_word: str, remaining_words: list[str]):
+    """Generate groups.
+
+    Args:
+        given_word (str): The word to generate groups for.
+        remaining_words (list[str]): The words that are still valid answers.
+
+    Returns:
+        (list[Group]): List of groups generated.
+    """
+    groups = defaultdict(list)
+
+    for word in remaining_words:
+        feedback = tuple(generate_true_feedback(given_word, word))
+        groups[feedback].append(word)
+
+    return [Group(words, possibility) for possibility, words in groups.items()]
+
+
 def get_best_word_groups(remaining_words: list[str], verbose=False) -> tuple[Optional[list[Group]], Optional[str]]:
     """Get the best word to guess by generating groups.
 
@@ -212,7 +267,7 @@ def get_best_word_groups(remaining_words: list[str], verbose=False) -> tuple[Opt
 
 def process_word(word, remaining_words) -> tuple[str, list[Group]]:
     """Generate groups for a given word and list of remaining words."""
-    groups = generate_groups(word, remaining_words)
+    groups = generate_groups_real_possibilities_only(word, remaining_words)
     return word, groups
 
 
