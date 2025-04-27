@@ -2,11 +2,11 @@
 
 import itertools
 import json
+import time
 from pathlib import Path
 
 from octordle_solver.dictionary import dictionary
-from octordle_solver.generate_groups import get_all_answer_possibilities
-from octordle_solver.solver import filter_words
+from octordle_solver.solver import filter_words, get_all_answers
 
 output_file = Path(__file__).parent / "best_second_guesses.json"
 output_file.touch()
@@ -19,8 +19,9 @@ if __name__ == "__main__":
     best_second_guesses = {}
     num_invalid_states = 0
 
+    start_time = time.time()
+
     for possibility in all_possibilities:
-        print(possibility)
 
         correct_letters = ["", "", "", "", ""]
         incorrect_letters = []
@@ -34,7 +35,6 @@ if __name__ == "__main__":
                 misplaced_letters.append((letter, i))
             elif state == 2:
                 incorrect_letters.append(letter)
-            print(i, state)
 
         print(f"{correct_letters = }")
         print(f"{incorrect_letters = }")
@@ -52,7 +52,7 @@ if __name__ == "__main__":
             num_invalid_states += 1
             continue
 
-        guesses = get_all_answer_possibilities(remaining_words, dictionary.valid_guesses.copy())
+        guesses = get_all_answers(remaining_words, dictionary.valid_guesses.copy())
         if len(guesses) == 0:
             print(f"No possible words for {possibility}")
             continue
@@ -64,6 +64,10 @@ if __name__ == "__main__":
 
     print(best_second_guesses)
     print(f"{num_invalid_states = }")
+
+    end_time = time.time()
+
+    print(f"Ran in {end_time - start_time:02f} seconds")
 
     with open(output_file, "w") as f:
         json.dump(best_second_guesses, f, indent=4)
