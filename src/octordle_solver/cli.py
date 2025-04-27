@@ -5,8 +5,6 @@ from colorama import Back, Style
 from octordle_solver.dictionary import dictionary
 from octordle_solver.generate_groups import (
     get_all_answer_possibilities,
-    get_best_word_groups,
-    get_best_word_groups_parallel,
     print_group_info,
 )
 from octordle_solver.solver import filter_words
