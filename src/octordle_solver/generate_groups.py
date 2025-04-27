@@ -187,9 +187,6 @@ def generate_true_feedback(guess: str, answer: str) -> list[int]:
     feedback = [PossibilityState.INCORRECT.value] * 5
     answer_chars: list[Union[None, str]] = list(answer)
 
-    # TODO: See if I can combine this into one pass
-    # TODO: Maybe this is the best way to do it, but this should be part of the filter function
-    # TODO: Chunking
     for i in range(5):
         if guess[i] == answer[i]:
             feedback[i] = PossibilityState.CORRECT.value
