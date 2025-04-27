@@ -12,6 +12,7 @@ from colorama import Back, Style
 
 from .dictionary import dictionary
 
+CHUNK_SIZE = 10
 SECOND_GUESS_PATH = Path(__file__).parent / "data" / "best_second_guesses.json"
 with open(SECOND_GUESS_PATH, "r") as f:
     best_second_guesses = json.load(f)
@@ -271,6 +272,29 @@ def process_word(word, remaining_words) -> tuple[str, list[Group]]:
     return word, groups
 
 
+def create_chunks(list_to_chunk: list, chunk_size: int):
+    """Create chunks from a given list."""
+    for i in range(0, len(list_to_chunk), chunk_size):
+        yield list_to_chunk[i : i + chunk_size]
+
+
+def process_word_batch(args) -> list[tuple[str, list[Group]]]:
+    """Generate groups for a given batch of words.
+
+    Args:
+        args (tuple): A tuple of the batch of words and the remaining words.
+
+    Returns:
+        list[tuple[str, list[Group]]]: List of results - tuples of the word and list of groups.
+    """
+    words_batch, remaining_words = args
+    batch_results = []
+    for word in words_batch:
+        groups = generate_groups_real_possibilities_only(word, remaining_words)
+        batch_results.append((word, groups))
+    return batch_results
+
+
 class AnswerPossibility:
     """Class representing a possible answer."""
 
@@ -400,14 +424,15 @@ def get_all_answer_possibilities(remaining_words: list[str], valid_guesses: Opti
         word, groups = process_word(remaining_words[0], remaining_words)
         all_possibilities = [AnswerPossibility(word, groups)]
 
-    # FIXME: This probably has a lot of duplicates in it
     words = remaining_words + dictionary.words
 
+    batches = list(create_chunks(words, CHUNK_SIZE))
+
     with concurrent.futures.ProcessPoolExecutor() as executor:
-        futures = {executor.submit(process_word, word, remaining_words): word for word in words}
-        for future in concurrent.futures.as_completed(futures):
-            word, groups = future.result()
-            all_possibilities.append(AnswerPossibility(word, groups))
+        batch_args = [(batch, remaining_words) for batch in batches]
+        for batch_result in executor.map(process_word_batch, batch_args):
+            for word, groups in batch_result:
+                all_possibilities.append(AnswerPossibility(word, groups))
 
     all_possibilities.sort(reverse=True)
 

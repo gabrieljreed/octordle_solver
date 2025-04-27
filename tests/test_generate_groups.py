@@ -4,6 +4,7 @@ from octordle_solver.generate_groups import (
     Group,
     Possibility,
     PossibilityState,
+    create_chunks,
     evaluate_game_state,
     generate_groups,
     generate_groups_real_possibilities_only,
@@ -158,3 +159,11 @@ def test_generate_true_feedback(guess, answer, expected):
 )
 def test_generate_groups_real_possibilities_only(given_word, remaining_words, expected):
     assert generate_groups_real_possibilities_only(given_word, remaining_words) == expected
+
+
+def test_create_chunks():
+    in_list = [f"{i:02d}" for i in range(23)]
+    chunks = list(create_chunks(in_list, 10))
+    assert chunks[0] == ["00", "01", "02", "03", "04", "05", "06", "07", "08", "09"]
+    assert chunks[1] == ["10", "11", "12", "13", "14", "15", "16", "17", "18", "19"]
+    assert chunks[2] == ["20", "21", "22"]
