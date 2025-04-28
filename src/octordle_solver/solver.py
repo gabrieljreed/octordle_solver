@@ -4,6 +4,7 @@ import concurrent.futures
 import json
 from collections import defaultdict
 from enum import Enum
+from functools import cached_property
 from pathlib import Path
 from typing import Optional, Union
 
@@ -12,6 +13,8 @@ from colorama import Back, Style
 from .dictionary import dictionary
 
 CHUNK_SIZE = 10
+PENALTY_WEIGHT = 0.1
+REMAINING_WORD_BONUS = 2
 SECOND_GUESS_PATH = Path(__file__).parent / "data" / "best_second_guesses.json"
 with open(SECOND_GUESS_PATH, "r") as f:
     best_second_guesses = json.load(f)
@@ -69,11 +72,16 @@ class AnswerPossibility:
         self.word = word
         self.groups = groups
 
+    @cached_property
+    def max_group_size(self):
+        """Size of the largest group in this AnswerPossibility."""
+        if not self.groups:
+            return -1
+        return max(len(group.words) for group in self.groups)
+
     def __str__(self):
         """Return a string representation of the AnswerPossibility."""
-        result = (
-            f"{self.word}: {len(self.groups)} groups, largest group {max(len(group.words) for group in self.groups)}"
-        )
+        result = f"{self.word}: {len(self.groups)} groups, largest group {self.max_group_size}"
         # TODO: Improve color printout here
         for group in self.groups:
             result += f"\n\t{group}"
@@ -90,6 +98,82 @@ class AnswerPossibility:
             return max(len(group.words) for group in self.groups) < max(len(group.words) for group in other.groups)
 
         return len(self.groups) > len(other.groups)
+
+
+def calculate_fitness_score(answer_possibility: AnswerPossibility, remaining_words: list[str]) -> float:
+    """Return a fitness score for the given answer possibility and list of remaining words.
+
+    Args:
+        answer_possibility (AnswerPossibility): The AnswerPossibility to generate a fitness score for.
+        remaining_words (list[str]): List of remaining words in the puzzle.
+
+    Returns:
+        (float): Computed score.
+    """
+    largest_group = max(len(group.words) for group in answer_possibility.groups)
+    fitness = len(answer_possibility.groups) - (largest_group * PENALTY_WEIGHT)
+
+    in_remaining_words = 1 if answer_possibility.word in remaining_words else 0
+    remaining_words_bonus = 2 * in_remaining_words
+
+    fitness += remaining_words_bonus
+
+    return fitness
+
+
+class Puzzle:
+    """Class to hold the state of a single Wordle puzzle."""
+
+    def __init__(self):
+        """Initialize the puzzle."""
+        self.remaining_words = dictionary.valid_answers.copy()
+        self.valid_guesses = dictionary.valid_guesses.copy()
+        self.correct_letters = ["", "", "", "", ""]
+        self.misplaced_letters = []
+        self.incorrect_letters = []
+        self.all_answers = []
+        self.all_answers_dict = {}
+
+    def make_guess(self, word: str, result: str):
+        """Guess a word.
+
+        Args:
+            word (str): Word that was guessed.
+            result (str): Result of the word being guessed.
+        """
+        for i in range(5):
+            letter = word[i]
+            if result[i] == "Y":
+                self.correct_letters[i] = letter
+            elif result[i] == "M":
+                self.misplaced_letters.append((letter, i))
+            elif letter in self.correct_letters:
+                continue
+            else:
+                self.incorrect_letters.append(letter)
+
+        self.remaining_words = filter_words(
+            self.remaining_words,
+            self.correct_letters,
+            self.misplaced_letters,
+            self.incorrect_letters,
+        )
+
+        self.get_all_answers()
+
+    def __str__(self):
+        """Return the string representation of the state of the Puzzle."""
+        result = f"Correct Letters: {self.correct_letters}\n"
+        result += f"Misplaced Letters: {self.misplaced_letters}\n"
+        result += f"Incorrect Letters: {self.incorrect_letters}"
+        return result
+
+    def get_all_answers(self) -> list[AnswerPossibility]:
+        """Get all answers for the given state."""
+        self.all_answers = get_all_answers(self.remaining_words)
+        for answer in self.all_answers:
+            self.all_answers_dict[answer.word] = answer
+        return self.all_answers
 
 
 def filter_words(
@@ -276,3 +360,47 @@ def get_all_answers(remaining_words: list[str], valid_guesses: Optional[list[str
     all_possibilities.sort(reverse=True)
 
     return all_possibilities
+
+
+def get_best_guess_multiple_puzzles(puzzles: list[Puzzle]) -> str:
+    """Get the best guess for a list of Puzzles.
+
+    Args:
+        puzzles (list[Puzzle]): List of Puzzles.
+
+    Returns:
+        (str): Best guess.
+    """
+    # If only 1 puzzle remains, return its best guess
+    if len(puzzles) == 1:
+        return puzzles[0].all_answers[0].word
+
+    # If a puzzle can be solved in 1 turn (len(remaining_words) == 1), return that word
+    for puzzle in puzzles:
+        if len(puzzle.remaining_words) == 1:
+            return puzzle.all_answers[0].word
+
+    # If a puzzle can be solved in 2 turns (an answer possibility has max group size of 1), return that word
+    for puzzle in puzzles:
+        for answer in puzzle.all_answers:
+            if answer.max_group_size == 1:
+                return answer.word
+
+    scored_guesses = []
+    sets = [set(list(puzzle.all_answers_dict.keys())) for puzzle in puzzles]
+    all_words = set.union(*sets)
+    total_remaining_words = sum([len(puzzle.remaining_words) for puzzle in puzzles])
+    for word in all_words:
+        total_score = 0.0
+        for puzzle in puzzles:
+            answer_possibility = puzzle.all_answers_dict.get(word)
+            if not answer_possibility:
+                continue
+            fitness_score = calculate_fitness_score(answer_possibility, puzzle.remaining_words)
+            weight = (total_remaining_words - len(puzzle.remaining_words)) / total_remaining_words
+            total_score += fitness_score * weight
+
+        scored_guesses.append((total_score, word))
+    scored_guesses.sort(reverse=True)
+    best_guess = scored_guesses[0][1]
+    return best_guess
