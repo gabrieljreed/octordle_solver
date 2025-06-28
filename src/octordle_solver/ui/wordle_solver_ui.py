@@ -188,17 +188,17 @@ class DiffDialog(QtWidgets.QDialog):
 
         layout = QtWidgets.QVBoxLayout(self)
 
-        list_layout = QtWidgets.QHBoxLayout(self)
+        list_layout = QtWidgets.QHBoxLayout()
         layout.addLayout(list_layout)
 
-        extra_words_layout = QtWidgets.QVBoxLayout(list_layout)
+        extra_words_layout = QtWidgets.QVBoxLayout()
         list_layout.addLayout(extra_words_layout)
         extra_words_layout.addWidget(QtWidgets.QLabel("Extra Words"))
         extra_words_list = QtWidgets.QListWidget(self)
         extra_words_list.addItems(extra_words)
         extra_words_layout.addWidget(extra_words_list)
 
-        missing_words_layout = QtWidgets.QVBoxLayout(list_layout)
+        missing_words_layout = QtWidgets.QVBoxLayout()
         list_layout.addLayout(missing_words_layout)
         missing_words_layout.addWidget(QtWidgets.QLabel("Missing Words"))
         missing_words_list = QtWidgets.QListWidget(self)
