@@ -141,15 +141,29 @@ class Puzzle:
             word (str): Word that was guessed.
             result (str): Result of the word being guessed.
         """
+        # First loop, get all correct letters
         for i in range(5):
             letter = word[i]
             if result[i] == "Y":
                 self.correct_letters[i] = letter
-            elif result[i] == "M":
+
+        # Second loop, get all misplaced letters
+        for i in range(5):
+            letter = word[i]
+            if result[i] == "M":
                 self.misplaced_letters.append((letter, i))
-            elif letter in self.correct_letters:
+
+        # Third loop, get all incorrect letters
+        for i in range(5):
+            letter = word[i]
+            if letter in self.correct_letters:
                 continue
-            else:
+
+            misplaced_letters = [m[0] for m in self.misplaced_letters]
+            if letter in misplaced_letters:
+                continue
+
+            if result[i] == "N":
                 self.incorrect_letters.append(letter)
 
         self.remaining_words = filter_words(
