@@ -189,6 +189,11 @@ class Puzzle:
             self.all_answers_dict[answer.word] = answer
         return self.all_answers
 
+    @property
+    def is_solved(self) -> bool:
+        """Return whether the puzzle has been solved."""
+        return all(letter for letter in self.correct_letters)
+
 
 def filter_words(
     words: list[str],

@@ -20,10 +20,12 @@ class Color(Enum):
 class LetterWidget(QtWidgets.QLabel):
     """Custom label to hold a letter."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, dimensions=None):
         """Initialize the widget."""
         super().__init__(parent)
-        self.setFixedSize(60, 60)
+        if not dimensions:
+            dimensions = [60, 60]
+        self.setFixedSize(*dimensions)
         # TODO: Fix this for dark mode and detect when to use it
         self.setStyleSheet(
             """

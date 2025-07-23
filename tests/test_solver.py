@@ -174,3 +174,13 @@ class TestPuzzle:
         assert puzzle.correct_letters == ["", "", "", "E", ""]
         assert puzzle.misplaced_letters == [("T", 0), ("R", 1)]
         assert puzzle.incorrect_letters == ["D"]
+
+    def test_is_solved(self):
+        puzzle = Puzzle()
+        assert not puzzle.is_solved
+
+        puzzle.correct_letters = ["C", "", "", "", ""]
+        assert not puzzle.is_solved
+
+        puzzle.correct_letters = ["C", "R", "A", "N", "E"]
+        assert puzzle.is_solved
