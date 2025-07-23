@@ -415,18 +415,36 @@ class WordleSolver(QtWidgets.QMainWindow):
             if self.computed_guesses[row]:
                 continue
 
+            # First loop, get all correct letters
             for col in range(5):
                 current_box = self.letter_boxes[row][col]
                 letter = current_box.text()
                 word += letter
-                if current_box.state == PossibilityState.INCORRECT:
-                    self.incorrect_letters.append(letter)
-                elif current_box.state == PossibilityState.MISPLACED:
-                    self.misplaced_letters.append((letter, col))
-                else:
+                if current_box.state == PossibilityState.CORRECT:
                     self.correct_letters[col] = letter
 
-                self.guessed_word = word
+            # Second loop, get all misplaced letters
+            for col in range(5):
+                current_box = self.letter_boxes[row][col]
+                letter = current_box.text()
+                if current_box.state == PossibilityState.MISPLACED:
+                    self.misplaced_letters.append((letter, col))
+
+            # Third loop, get all incorrect letters
+            for col in range(5):
+                current_box = self.letter_boxes[row][col]
+                letter = current_box.text()
+                if letter in self.correct_letters:
+                    continue
+
+                misplaced_letters = [m[0] for m in self.misplaced_letters]
+                if letter in misplaced_letters:
+                    continue
+
+                if current_box.state == PossibilityState.INCORRECT:
+                    self.incorrect_letters.append(letter)
+
+            self.guessed_word = word
 
             self.computed_guesses[row] = True
 
