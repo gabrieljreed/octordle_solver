@@ -23,4 +23,5 @@ profile = "black"
 "Bug Tracker" = "https://github.com/gabrieljreed/octordle_solver/issues"
 
 [project.scripts]
-wordle-solver-ui = "octordle_solver.ui.launch_ui:main"
+wordle-solver-ui = "octordle_solver.ui.launch_ui:wordle"
+octordle-solver-ui = "octordle_solver.ui.launch_ui:octordle"
