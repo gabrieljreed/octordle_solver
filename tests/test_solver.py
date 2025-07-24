@@ -3,6 +3,7 @@ import pytest
 from octordle_solver.dictionary import dictionary
 from octordle_solver.solver import (
     Group,
+    Puzzle,
     create_chunks,
     filter_words,
     generate_groups,
@@ -145,3 +146,41 @@ def test_create_chunks():
 def test_filter(words, correct_letters, incorrect_letters, misplaced_letters, expected):
     result = filter_words(words, correct_letters, misplaced_letters, incorrect_letters)
     assert result == expected
+
+
+class TestPuzzle:
+    def test_init(self):
+        puzzle = Puzzle()
+        assert puzzle.correct_letters == ["", "", "", "", ""]
+        assert puzzle.misplaced_letters == []
+        assert puzzle.incorrect_letters == []
+        assert puzzle.all_answers == []
+        assert puzzle.all_answers_dict == {}
+
+    def test_make_guess(self):
+        puzzle = Puzzle()
+        # Pare down the list of remaining words so the test doesn't take as long
+        puzzle.remaining_words = [
+            "AFTER",
+            "CARET",
+            "CATER",
+            "GATER",
+            "HATER",
+            "MATEY",
+            "WATER",
+        ]
+        puzzle.make_guess("TREED", "MMNYN")
+        assert "WATER" in puzzle.remaining_words
+        assert puzzle.correct_letters == ["", "", "", "E", ""]
+        assert puzzle.misplaced_letters == [("T", 0), ("R", 1)]
+        assert puzzle.incorrect_letters == ["D"]
+
+    def test_is_solved(self):
+        puzzle = Puzzle()
+        assert not puzzle.is_solved
+
+        puzzle.correct_letters = ["C", "", "", "", ""]
+        assert not puzzle.is_solved
+
+        puzzle.correct_letters = ["C", "R", "A", "N", "E"]
+        assert puzzle.is_solved
