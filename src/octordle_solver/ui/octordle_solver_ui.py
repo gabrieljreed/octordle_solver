@@ -1,5 +1,6 @@
 """UI for solving Octordle puzzles."""
 
+import threading
 from typing import Any, Optional
 
 from PySide6 import QtCore, QtWidgets
@@ -134,6 +135,8 @@ class OctordleSolver(QtWidgets.QMainWindow):
         self.letters_typed = 0
         self.is_first_word_guessed = False
 
+        self.cancel_flag = threading.Event()
+
         self.setup_ui()
 
     def setup_ui(self):
@@ -262,6 +265,8 @@ class OctordleSolver(QtWidgets.QMainWindow):
         if self.letters_typed != 0 or not self.is_first_word_guessed:
             return
 
+        self.cancel_flag.clear()
+
         self.remaining_tasks = 8
         self.progress_dialog = QtWidgets.QProgressDialog(
             "",
@@ -273,13 +278,18 @@ class OctordleSolver(QtWidgets.QMainWindow):
         self.progress_dialog.setWindowTitle("Getting best guess...")
         self.progress_dialog.setWindowModality(Qt.ApplicationModal)
         self.progress_dialog.setValue(0)
+        self.progress_dialog.canceled.connect(self.cancel_tasks)
         self.progress_dialog.show()
-        # TODO: Make the cancel button actually work
 
         for i in range(8):
             puzzle = self.puzzles[i]
             puzzle_widget = self.puzzle_widgets[i]
-            thread_worker = ThreadWorker(fn=puzzle.make_guess, word=puzzle_widget.word, result=puzzle_widget.result)
+            thread_worker = ThreadWorker(
+                fn=puzzle.make_guess,
+                word=puzzle_widget.word,
+                result=puzzle_widget.result,
+                cancel_flag=self.cancel_flag,
+            )
             thread_worker.signals.result.connect(self._on_make_guess_done)
             self.threadpool.start(thread_worker)
 
@@ -288,6 +298,9 @@ class OctordleSolver(QtWidgets.QMainWindow):
 
         Once all puzzle guess workers finish, start the get_best_guess_multiple_puzzles worker.
         """
+        if self.cancel_flag.is_set():
+            return
+
         self.remaining_tasks -= 1
         done = 8 - self.remaining_tasks
         if self.progress_dialog:
@@ -315,7 +328,17 @@ class OctordleSolver(QtWidgets.QMainWindow):
         Args:
             best_guess (str): The best guess returned by the function
         """
+        if self.cancel_flag.is_set():
+            return
+
         if self.progress_dialog:
             self.progress_dialog.close()
         self.best_guess = best_guess
         self.best_guess_label.setText(f"Best guess: {self.best_guess}")
+
+    def cancel_tasks(self):
+        """Cancel any running tasks."""
+        print("Cancelling tasks")
+        self.cancel_flag.set()
+        if self.progress_dialog:
+            self.progress_dialog.cancel()
