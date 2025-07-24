@@ -338,7 +338,6 @@ class OctordleSolver(QtWidgets.QMainWindow):
 
     def cancel_tasks(self):
         """Cancel any running tasks."""
-        print("Cancelling tasks")
         self.cancel_flag.set()
         if self.progress_dialog:
             self.progress_dialog.cancel()
