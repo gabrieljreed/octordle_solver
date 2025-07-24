@@ -1,13 +1,14 @@
 """UI for solving Octordle puzzles."""
 
-from typing import Any
+from typing import Any, Optional
 
-from PySide6 import QtWidgets
+from PySide6 import QtCore, QtWidgets
 from PySide6.QtCore import Qt
 
 from ..constants import STARTING_GUESS
 from ..solver import PossibilityState, Puzzle, get_best_guess_multiple_puzzles
 from .helpers import Color, LetterWidget
+from .threading import ThreadWorker
 
 
 class WordleGridWidget(QtWidgets.QWidget):
@@ -66,7 +67,7 @@ class WordleGridWidget(QtWidgets.QWidget):
         """Handle enter being typed."""
         if self.is_solved:
             return
-        if self._current_row > 6 or self._current_col != 5:
+        if self._current_row > self.num_rows or self._current_col != 5:
             print("Word is not complete")
             return
 
@@ -127,6 +128,11 @@ class OctordleSolver(QtWidgets.QMainWindow):
             Puzzle(),
         ]
 
+        self.best_guess = STARTING_GUESS
+
+        self.threadpool = QtCore.QThreadPool()
+        self.remaining_tasks = 0
+
         self.setup_ui()
 
     def setup_ui(self):
@@ -156,7 +162,7 @@ class OctordleSolver(QtWidgets.QMainWindow):
                 self.puzzle_widgets.append(puzzle_widget)
         self.puzzle_scroll_area.setWidget(self.puzzles_widget)
 
-        # Best guesses
+        # Best guess
         self.best_guess_widget = QtWidgets.QWidget()
         self.best_guess_widget.setLayout(QtWidgets.QVBoxLayout())
         layout.addWidget(self.best_guess_widget)
@@ -165,15 +171,14 @@ class OctordleSolver(QtWidgets.QMainWindow):
         self.get_best_guess_button.clicked.connect(self.get_best_guess)
         self.best_guess_widget.layout().addWidget(self.get_best_guess_button)
 
-        self.best_guess_widget.layout().addWidget(QtWidgets.QLabel("Best guesses"))
+        self.best_guess_label = QtWidgets.QLabel(f"Best guess: {self.best_guess}")
+        self.best_guess_widget.layout().addWidget(self.best_guess_label)
 
-        self.best_guess_list = QtWidgets.QListWidget()
-        self.best_guess_list.addItem(STARTING_GUESS)
-        # self.best_guess_list.itemSelectionChanged.connect(self.update_groups_widgets)
-        self.best_guess_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        # self.best_guess_list.customContextMenuRequested.connect(self.show_best_guess_context_menu)
-        # self.best_guess_list.itemDoubleClicked.connect(self.handle_best_guess_double_click)
-        self.best_guess_widget.layout().addWidget(self.best_guess_list)
+        self.use_best_guess_button = QtWidgets.QPushButton("Use best guess")
+        self.use_best_guess_button.clicked.connect(self.use_best_guess)
+        self.best_guess_widget.layout().addWidget(self.use_best_guess_button)
+
+        self.progress_dialog: Optional[QtWidgets.QProgressDialog] = None
 
     def keyPressEvent(self, event):
         """Handle key press events."""
@@ -199,22 +204,70 @@ class OctordleSolver(QtWidgets.QMainWindow):
         for puzzle_widget in self.puzzle_widgets:
             puzzle_widget.handle_enter()
 
+    def use_best_guess(self):
+        """Enter the best guess in each puzzle."""
+        for letter in self.best_guess:
+            for puzzle_widget in self.puzzle_widgets:
+                puzzle_widget.type_letter(letter)
+
     def get_best_guess(self):
         """Get the best guess for the given game state."""
         # TODO: Figure out how to exit early if the word is not complete
 
+        self.remaining_tasks = 8
+        self.progress_dialog = QtWidgets.QProgressDialog(
+            "",
+            "Cancel",
+            0,
+            self.remaining_tasks + 1,
+            self,
+        )
+        self.progress_dialog.setWindowTitle("Getting best guess...")
+        self.progress_dialog.setWindowModality(Qt.ApplicationModal)
+        self.progress_dialog.setValue(0)
+        self.progress_dialog.show()
+        # TODO: Make the cancel button actually work
+
         for i in range(8):
-            print(i)
             puzzle = self.puzzles[i]
             puzzle_widget = self.puzzle_widgets[i]
-            print(f"{puzzle_widget.word = }")
-            print(f"{puzzle_widget.result = }")
-            # TODO: thread this
-            puzzle.make_guess(puzzle_widget.word, puzzle_widget.result)
-            print(puzzle)
-            if puzzle.is_solved:
-                puzzle_widget.is_solved = True
-                continue
+            thread_worker = ThreadWorker(fn=puzzle.make_guess, word=puzzle_widget.word, result=puzzle_widget.result)
+            thread_worker.signals.result.connect(self._on_make_guess_done)
+            self.threadpool.start(thread_worker)
 
-        best_guess = get_best_guess_multiple_puzzles([puzzle for puzzle in self.puzzles if not puzzle.is_solved])
-        print(f"{best_guess = }")
+    def _on_make_guess_done(self):
+        """Handle a guess thread worker finishing.
+
+        Once all puzzle guess workers finish, start the get_best_guess_multiple_puzzles worker.
+        """
+        self.remaining_tasks -= 1
+        done = 8 - self.remaining_tasks
+        if self.progress_dialog:
+            self.progress_dialog.setValue(done)
+
+        if self.remaining_tasks == 0:
+            if self.progress_dialog:
+                self.progress_dialog.setValue(8)
+            for i in range(8):
+                puzzle = self.puzzles[i]
+                puzzle_widget = self.puzzle_widgets[i]
+                if puzzle.is_solved:
+                    puzzle_widget.is_solved = True
+            puzzles = [p for p in self.puzzles if not p.is_solved]
+            thread_worker = ThreadWorker(
+                fn=get_best_guess_multiple_puzzles,
+                puzzles=puzzles,
+            )
+            thread_worker.signals.result.connect(self._on_get_best_guess_done)
+            self.threadpool.start(thread_worker)
+
+    def _on_get_best_guess_done(self, best_guess: str):
+        """Handle the get_best_guess_multiple_puzzles thread worker finishing.
+
+        Args:
+            best_guess (str): The best guess returned by the function
+        """
+        if self.progress_dialog:
+            self.progress_dialog.close()
+        self.best_guess = best_guess
+        self.best_guess_label.setText(f"Best guess: {self.best_guess}")
