@@ -18,8 +18,6 @@ class WordleGridWidget(QtWidgets.QWidget):
         """Initialize the widget."""
         super().__init__(parent)
 
-        # TODO: Maybe the puzzle should live here? Depends on how the solver wants them
-
         self._current_row = 0
         self._current_col = 0
 
@@ -133,6 +131,9 @@ class OctordleSolver(QtWidgets.QMainWindow):
         self.threadpool = QtCore.QThreadPool()
         self.remaining_tasks = 0
 
+        self.letters_typed = 0
+        self.is_first_word_guessed = False
+
         self.setup_ui()
 
     def setup_ui(self):
@@ -149,18 +150,17 @@ class OctordleSolver(QtWidgets.QMainWindow):
         self.puzzle_scroll_area = QtWidgets.QScrollArea()
         layout.addWidget(self.puzzle_scroll_area)
 
-        # TODO: Probably rename some of these to not be so similar
-        self.puzzles_widget = QtWidgets.QWidget()
-        self.puzzles_layout = QtWidgets.QGridLayout()
-        self.puzzles_widget.setLayout(self.puzzles_layout)
+        self.all_puzzles_widget = QtWidgets.QWidget()
+        self.all_puzzles_layout = QtWidgets.QGridLayout()
+        self.all_puzzles_widget.setLayout(self.all_puzzles_layout)
         self.puzzle_widgets: list[WordleGridWidget] = []
         # TODO: Don't hard code these numbers
         for row in range(4):
             for col in range(2):
                 puzzle_widget = WordleGridWidget()
-                self.puzzles_layout.addWidget(puzzle_widget, row, col)
+                self.all_puzzles_layout.addWidget(puzzle_widget, row, col)
                 self.puzzle_widgets.append(puzzle_widget)
-        self.puzzle_scroll_area.setWidget(self.puzzles_widget)
+        self.puzzle_scroll_area.setWidget(self.all_puzzles_widget)
 
         # Best guess
         self.best_guess_widget = QtWidgets.QWidget()
@@ -180,6 +180,8 @@ class OctordleSolver(QtWidgets.QMainWindow):
 
         self.progress_dialog: Optional[QtWidgets.QProgressDialog] = None
 
+        # TODO: Make the UI lay out nicer
+
     def keyPressEvent(self, event):
         """Handle key press events."""
         if event.key() in range(Qt.Key_A, Qt.Key_Z + 1):
@@ -194,15 +196,24 @@ class OctordleSolver(QtWidgets.QMainWindow):
         for puzzle_widget in self.puzzle_widgets:
             puzzle_widget.type_letter(letter)
 
+        self.letters_typed += 1
+
     def _handle_backspace(self):
         """Handle backspace input."""
         for puzzle_widget in self.puzzle_widgets:
             puzzle_widget.delete_letter()
 
+        self.letters_typed -= 1
+
     def _handle_enter(self):
         """Handle enter input."""
         for puzzle_widget in self.puzzle_widgets:
             puzzle_widget.handle_enter()
+
+        if self.letters_typed == 5:
+            self.letters_typed = 0
+            if not self.is_first_word_guessed:
+                self.is_first_word_guessed = True
 
     def use_best_guess(self):
         """Enter the best guess in each puzzle."""
@@ -210,9 +221,12 @@ class OctordleSolver(QtWidgets.QMainWindow):
             for puzzle_widget in self.puzzle_widgets:
                 puzzle_widget.type_letter(letter)
 
+        self.letters_typed = 5
+
     def get_best_guess(self):
         """Get the best guess for the given game state."""
-        # TODO: Figure out how to exit early if the word is not complete
+        if self.letters_typed != 0 or not self.is_first_word_guessed:
+            return
 
         self.remaining_tasks = 8
         self.progress_dialog = QtWidgets.QProgressDialog(
