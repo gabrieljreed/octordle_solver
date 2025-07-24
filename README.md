@@ -5,6 +5,7 @@
 ```bash
 pip install -e .
 wordle-solver-ui
+octordle-solver-ui
 ```
 
 ## Running tests
