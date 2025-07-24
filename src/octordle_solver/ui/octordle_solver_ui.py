@@ -146,26 +146,33 @@ class OctordleSolver(QtWidgets.QMainWindow):
         layout = QtWidgets.QHBoxLayout()
         central_widget.setLayout(layout)
 
+        # Splitter
+        splitter = QtWidgets.QSplitter(Qt.Horizontal)
+        splitter.splitterMoved.connect(self.relayout_puzzles)
+        layout.addWidget(splitter)
+
         # Puzzle
         self.puzzle_scroll_area = QtWidgets.QScrollArea()
-        layout.addWidget(self.puzzle_scroll_area)
+        self.puzzle_scroll_area.setWidgetResizable(True)
+        splitter.addWidget(self.puzzle_scroll_area)
 
         self.all_puzzles_widget = QtWidgets.QWidget()
         self.all_puzzles_layout = QtWidgets.QGridLayout()
         self.all_puzzles_widget.setLayout(self.all_puzzles_layout)
         self.puzzle_widgets: list[WordleGridWidget] = []
-        # TODO: Don't hard code these numbers
-        for row in range(4):
-            for col in range(2):
-                puzzle_widget = WordleGridWidget()
-                self.all_puzzles_layout.addWidget(puzzle_widget, row, col)
-                self.puzzle_widgets.append(puzzle_widget)
+        for i in range(8):
+            puzzle_widget = WordleGridWidget()
+            row = i // 4
+            col = i % 4
+            self.all_puzzles_layout.addWidget(puzzle_widget, row, col)
+            self.puzzle_widgets.append(puzzle_widget)
+
         self.puzzle_scroll_area.setWidget(self.all_puzzles_widget)
 
         # Best guess
         self.best_guess_widget = QtWidgets.QWidget()
         self.best_guess_widget.setLayout(QtWidgets.QVBoxLayout())
-        layout.addWidget(self.best_guess_widget)
+        splitter.addWidget(self.best_guess_widget)
 
         self.get_best_guess_button = QtWidgets.QPushButton("Get best guesses")
         self.get_best_guess_button.clicked.connect(self.get_best_guess)
@@ -178,9 +185,36 @@ class OctordleSolver(QtWidgets.QMainWindow):
         self.use_best_guess_button.clicked.connect(self.use_best_guess)
         self.best_guess_widget.layout().addWidget(self.use_best_guess_button)
 
+        self.best_guess_widget.layout().addStretch()
+
         self.progress_dialog: Optional[QtWidgets.QProgressDialog] = None
 
-        # TODO: Make the UI lay out nicer
+    def resizeEvent(self, event):
+        """Override resize event."""
+        super().resizeEvent(event)
+        self.relayout_puzzles()
+
+    def relayout_puzzles(self):
+        """Lay out puzzles to fit available width."""
+        for i in reversed(range(self.all_puzzles_layout.count())):
+            widget = self.all_puzzles_layout.itemAt(i).widget()
+            self.all_puzzles_layout.removeWidget(widget)
+
+        if not self.puzzle_widgets:
+            return
+
+        available_width = self.puzzle_scroll_area.viewport().width()
+        sample_widget = self.puzzle_widgets[0]
+        widget_width = sample_widget.sizeHint().width() + self.all_puzzles_layout.spacing()
+        if widget_width == 0:
+            widget_width = 150
+
+        max_cols = max(1, available_width // widget_width)
+
+        for index, widget in enumerate(self.puzzle_widgets):
+            row = index // max_cols
+            col = index % max_cols
+            self.all_puzzles_layout.addWidget(widget, row, col)
 
     def keyPressEvent(self, event):
         """Handle key press events."""
