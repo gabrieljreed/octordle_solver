@@ -25,12 +25,31 @@ class WordleGridWidget(QtWidgets.QWidget):
         self.num_rows = num_rows
         self.is_solved = False
 
+        self.remaining_words: list[str] = []
+
         self.setup_ui()
 
     def setup_ui(self):
         """Set up the UI."""
+        self.main_layout = QtWidgets.QVBoxLayout()
+        self.setLayout(self.main_layout)
+
+        self.header_widget = QtWidgets.QWidget()
+        self.header_layout = QtWidgets.QHBoxLayout()
+        self.header_widget.setLayout(self.header_layout)
+        self.main_layout.addWidget(self.header_widget)
+
+        self.label = QtWidgets.QLabel("Puzzle")
+        self.header_layout.addWidget(self.label)
+
+        self.header_layout.addStretch()
+
+        self.remaining_words_button = QtWidgets.QPushButton("0 Remaining Words")
+        self.remaining_words_button.clicked.connect(self.show_remaining_words)
+        self.header_layout.addWidget(self.remaining_words_button)
+
         self.grid_layout = QtWidgets.QGridLayout()
-        self.setLayout(self.grid_layout)
+        self.main_layout.addLayout(self.grid_layout)
 
         self.letter_boxes = []
         for row in range(self.num_rows):
@@ -108,6 +127,25 @@ class WordleGridWidget(QtWidgets.QWidget):
                 result += "N"
         return result
 
+    def set_title(self, title: str):
+        """Set the title of the puzzle widget.
+
+        Args:
+            title (str): Title of the widget
+        """
+        self.label.setText(title)
+
+    def set_remaining_words(self, remaining_words: list[str]):
+        """Set the remaining words and update the UI."""
+        self.remaining_words = remaining_words
+        words_text = "Word" if len(remaining_words) == 1 else "Words"
+        self.remaining_words_button.setText(f"{len(self.remaining_words)} Remaining {words_text}")
+
+    def show_remaining_words(self):
+        """Display a dialog to show the remaining words."""
+        remaining_words_dialog = RemainingWordsDialog(parent=self, words=self.remaining_words)
+        remaining_words_dialog.show()
+
 
 class OctordleSolver(QtWidgets.QMainWindow):
     """UI for solving Octordle puzzles."""
@@ -165,6 +203,7 @@ class OctordleSolver(QtWidgets.QMainWindow):
         self.puzzle_widgets: list[WordleGridWidget] = []
         for i in range(8):
             puzzle_widget = WordleGridWidget()
+            puzzle_widget.set_title(f"Puzzle {i + 1}")
             row = i // 4
             col = i % 4
             self.all_puzzles_layout.addWidget(puzzle_widget, row, col)
@@ -191,6 +230,15 @@ class OctordleSolver(QtWidgets.QMainWindow):
         self.best_guess_widget.layout().addStretch()
 
         self.progress_dialog: Optional[QtWidgets.QProgressDialog] = None
+
+        self.update_puzzle_widgets()
+
+    def update_puzzle_widgets(self):
+        """Update the remaining words in each puzzle widget."""
+        for i in range(8):
+            puzzle = self.puzzles[i]
+            puzzle_widget = self.puzzle_widgets[i]
+            puzzle_widget.set_remaining_words(puzzle.remaining_words)
 
     def resizeEvent(self, event):
         """Override resize event."""
@@ -336,8 +384,36 @@ class OctordleSolver(QtWidgets.QMainWindow):
         self.best_guess = best_guess
         self.best_guess_label.setText(f"Best guess: {self.best_guess}")
 
+        self.update_puzzle_widgets()
+
     def cancel_tasks(self):
         """Cancel any running tasks."""
         self.cancel_flag.set()
         if self.progress_dialog:
             self.progress_dialog.cancel()
+
+
+class RemainingWordsDialog(QtWidgets.QDialog):
+    """Dialog to display remaining words."""
+
+    def __init__(self, words: list[str], parent: Any = None):
+        """Dialog to display remaining words.
+
+        Args:
+            words (list[str]): List of remaining words to display
+            parent (Any): Parent of the widget
+        """
+        super().__init__(parent)
+        self.words = words
+
+        self.setup_ui()
+
+    def setup_ui(self):
+        """Set up the UI."""
+        self.setWindowTitle("Remaining Words")
+
+        layout = QtWidgets.QVBoxLayout(self)
+
+        self.words_list_widget = QtWidgets.QListWidget()
+        layout.addWidget(self.words_list_widget)
+        self.words_list_widget.addItems(self.words)
