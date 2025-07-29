@@ -3,3 +3,4 @@
 *.pyc
 .coverage
 scratch_pad.py
+.vscode/*

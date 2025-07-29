@@ -4,11 +4,11 @@ import concurrent.futures
 import json
 from collections import defaultdict
 from enum import Enum
-from functools import cached_property
+from functools import cached_property, lru_cache
 from pathlib import Path
 from typing import Optional, Union
 
-from colorama import Back, Style
+from colorama import Fore, Style
 
 from .dictionary import dictionary
 
@@ -17,7 +17,7 @@ PENALTY_WEIGHT = 0.1
 REMAINING_WORD_BONUS = 2
 SECOND_GUESS_PATH = Path(__file__).parent / "data" / "best_second_guesses.json"
 with open(SECOND_GUESS_PATH, "r") as f:
-    best_second_guesses = json.load(f)
+    BEST_SECOND_GUESSES = json.load(f)
 
 
 class PossibilityState(Enum):
@@ -110,11 +110,10 @@ def calculate_fitness_score(answer_possibility: AnswerPossibility, remaining_wor
     Returns:
         (float): Computed score.
     """
-    largest_group = max(len(group.words) for group in answer_possibility.groups)
-    fitness = len(answer_possibility.groups) - (largest_group * PENALTY_WEIGHT)
+    fitness = len(answer_possibility.groups) - (answer_possibility.max_group_size * PENALTY_WEIGHT)
 
     in_remaining_words = 1 if answer_possibility.word in remaining_words else 0
-    remaining_words_bonus = 2 * in_remaining_words
+    remaining_words_bonus = REMAINING_WORD_BONUS * in_remaining_words
 
     fitness += remaining_words_bonus
 
@@ -184,9 +183,8 @@ class Puzzle:
 
     def get_all_answers(self) -> list[AnswerPossibility]:
         """Get all answers for the given state."""
-        self.all_answers = get_all_answers(self.remaining_words)
-        for answer in self.all_answers:
-            self.all_answers_dict[answer.word] = answer
+        self.all_answers = get_all_answers(self.remaining_words, self.valid_guesses)
+        self.all_answers_dict = {answer.word: answer for answer in self.all_answers}
         return self.all_answers
 
     @property
@@ -245,17 +243,17 @@ def get_cached_best_second_guess(answer_possibility: list[int]) -> Optional[str]
     for i in answer_possibility:
         possibility_key += str(i)
 
-    return best_second_guesses.get(possibility_key)
+    return BEST_SECOND_GUESSES.get(possibility_key)
 
 
-def pretty_print_group(group: Group, word: str):
+def pretty_print_group(group: Group, word: str):  # pragma: no cover
     """Print a group in a nice format."""
     output_string = ""
     for i, letter in enumerate(word):
         if group.possibility[i] == 0:
-            output_string += Back.GREEN + letter + Back.RESET
+            output_string += Fore.GREEN + letter + Fore.RESET
         elif group.possibility[i] == 1:
-            output_string += Back.YELLOW + letter + Back.RESET
+            output_string += Fore.YELLOW + letter + Fore.RESET
         else:
             output_string += Style.DIM + letter + Style.RESET_ALL
     print(output_string)
@@ -265,7 +263,7 @@ def pretty_print_group(group: Group, word: str):
     print("---")
 
 
-def print_group_info(groups: Optional[list[Group]], word: Optional[str]) -> None:
+def print_group_info(groups: Optional[list[Group]], word: Optional[str]) -> None:  # pragma: no cover
     """Print information about the groups."""
     if not groups or not word:
         print("No groups found")
@@ -276,6 +274,17 @@ def print_group_info(groups: Optional[list[Group]], word: Optional[str]) -> None
 
     print(f"Num groups: {len(groups)}")
     print(f"Largest group: {max(len(group.words) for group in groups)}")
+
+
+def pretty_print_answer_possibility(possibility: AnswerPossibility):  # pragma: no cover
+    """Print an AnswerPossibility in a nice format.
+
+    Args:
+        possibility (AnswerPossibility): AnswerPossibility to print.
+    """
+    print(f"{possibility.word}: {len(possibility.groups)} groups, largest group {possibility.max_group_size}")
+    for group in possibility.groups:
+        pretty_print_group(group, possibility.word)
 
 
 def get_wordle_feedback(guess: str, answer: str) -> list[int]:
@@ -304,6 +313,20 @@ def get_wordle_feedback(guess: str, answer: str) -> list[int]:
     return feedback
 
 
+@lru_cache(maxsize=None)
+def get_wordle_feedback_cached(guess: str, answer: str) -> list[int]:
+    """Simulate Wordle feedback for a guess vs the real answer.
+
+    Args:
+        guess (str): The guessed word.
+        answer (str): The answer.
+
+    Returns:
+        (list[int]): A list of 5 integers.
+    """
+    return get_wordle_feedback(guess, answer)
+
+
 def generate_groups(given_word: str, remaining_words: list[str]):
     """Generate groups.
 
@@ -317,10 +340,25 @@ def generate_groups(given_word: str, remaining_words: list[str]):
     groups = defaultdict(list)
 
     for word in remaining_words:
-        feedback = tuple(get_wordle_feedback(given_word, word))
+        feedback = tuple(get_wordle_feedback_cached(given_word, word))
         groups[feedback].append(word)
 
     return [Group(words, possibility) for possibility, words in groups.items()]
+
+
+@lru_cache(maxsize=None)
+def generate_groups_cached(given_word, remaining_words_tuple):
+    """Generate groups.
+
+    Args:
+        given_word (str): The word to generate groups for.
+        remaining_words (list[str]): The words that are still valid answers.
+
+    Returns:
+        (list[Group]): List of groups generated.
+    """
+    remaining_words = list(remaining_words_tuple)
+    return generate_groups(given_word, remaining_words)
 
 
 def create_chunks(list_to_chunk: list, chunk_size: int):
@@ -341,7 +379,7 @@ def process_word_batch(args) -> list[tuple[str, list[Group]]]:
     words_batch, remaining_words = args
     batch_results = []
     for word in words_batch:
-        groups = generate_groups(word, remaining_words)
+        groups = generate_groups_cached(word, tuple(remaining_words))
         batch_results.append((word, groups))
     return batch_results
 
@@ -363,7 +401,7 @@ def get_all_answers(remaining_words: list[str], valid_guesses: Optional[list[str
 
     if len(remaining_words) == 1:
         word = remaining_words[0]
-        groups = generate_groups(word, remaining_words)
+        groups = generate_groups_cached(word, tuple(remaining_words))
         all_possibilities = [AnswerPossibility(word, groups)]
 
     words = remaining_words + dictionary.words
@@ -406,9 +444,12 @@ def get_best_guess_multiple_puzzles(puzzles: list[Puzzle]) -> str:
                 return answer.word
 
     scored_guesses = []
-    sets = [set(list(puzzle.all_answers_dict.keys())) for puzzle in puzzles]
+    sets = [set(puzzle.all_answers_dict.keys()) for puzzle in puzzles]
     all_words = set.union(*sets)
     total_remaining_words = sum([len(puzzle.remaining_words) for puzzle in puzzles])
+    weights = {
+        puzzle: (total_remaining_words - len(puzzle.remaining_words)) / total_remaining_words for puzzle in puzzles
+    }
     for word in all_words:
         total_score = 0.0
         for puzzle in puzzles:
@@ -416,10 +457,9 @@ def get_best_guess_multiple_puzzles(puzzles: list[Puzzle]) -> str:
             if not answer_possibility:
                 continue
             fitness_score = calculate_fitness_score(answer_possibility, puzzle.remaining_words)
-            weight = (total_remaining_words - len(puzzle.remaining_words)) / total_remaining_words
+            weight = weights[puzzle]
             total_score += fitness_score * weight
 
         scored_guesses.append((total_score, word))
-    scored_guesses.sort(reverse=True)
-    best_guess = scored_guesses[0][1]
+    best_guess = max(scored_guesses)[1]
     return best_guess

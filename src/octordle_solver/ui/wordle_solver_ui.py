@@ -10,6 +10,7 @@ from PySide6.QtCore import Qt
 from ..constants import STARTING_GUESS
 from ..dictionary import dictionary
 from ..solver import (
+    AnswerPossibility,
     PossibilityState,
     filter_words,
     get_all_answers,
@@ -419,7 +420,7 @@ class WordleSolver(QtWidgets.QMainWindow):
 
         self.threadpool.start(thread_worker)
 
-    def _on_get_answer_possibilities_finished(self, possibilities):
+    def _on_get_answer_possibilities_finished(self, possibilities: list[AnswerPossibility]):
         """Update the UI when the thread worker from get_best_guesses finishes."""
         self.possibilities = possibilities
 

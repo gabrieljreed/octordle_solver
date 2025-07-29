@@ -2,13 +2,25 @@ import pytest
 
 from octordle_solver.dictionary import dictionary
 from octordle_solver.solver import (
+    AnswerPossibility,
     Group,
     Puzzle,
+    calculate_fitness_score,
     create_chunks,
     filter_words,
     generate_groups,
+    get_best_guess_multiple_puzzles,
     get_wordle_feedback,
+    pretty_print_group,
 )
+from octordle_solver.utils import catchtime
+
+GROUP_1 = Group(["DATER"], (2, 2, 2, 0, 1))
+GROUP_2 = Group(["EATER"], (2, 1, 2, 0, 2))
+GROUP_3 = Group(["HATER"], (0, 2, 2, 0, 2))
+GROUP_4 = Group(["RATED"], (2, 2, 2, 0, 0))
+GROUP_5 = Group(["RATER"], (2, 2, 2, 0, 2))
+GROUP_6 = Group(["WATER"], (2, 2, 1, 0, 2))
 
 
 class TestGroup:
@@ -45,45 +57,126 @@ class TestGroup:
         assert group_1 != {"words": ["ABCDE"], "possibility": (0, 0, 0, 0, 0)}
 
 
-@pytest.mark.parametrize(
-    "guess, answer, expected",
-    [
-        ["ABCDE", "ABCDE", [0, 0, 0, 0, 0]],
-        ["ABCDE", "ABCED", [0, 0, 0, 1, 1]],
-        ["ABCDE", "ABCDZ", [0, 0, 0, 0, 2]],
-        ["ABCDE", "VWXYZ", [2, 2, 2, 2, 2]],
-        ["APPLE", "PPLAE", [1, 0, 1, 1, 0]],
-    ],
-)
-def test_generate_true_feedback(guess, answer, expected):
-    assert get_wordle_feedback(guess, answer) == expected
+class TestAnswerPossibility:
+    demo_groups = [GROUP_1, GROUP_2, GROUP_3, GROUP_4, GROUP_5, GROUP_6]
 
+    def test_init(self):
+        answer_possibility = AnswerPossibility("CRANE", self.demo_groups)
+        assert answer_possibility.word == "CRANE"
+        assert answer_possibility.groups == self.demo_groups
 
-@pytest.mark.parametrize(
-    "given_word, remaining_words, expected",
-    [
-        ["ABCDE", [], []],
+    def test_max_group_size(self):
+        answer_possibility = AnswerPossibility("CRANE", self.demo_groups)
+        assert answer_possibility.max_group_size == 1
+
+        answer_possibility = AnswerPossibility("CRANE", [])
+        assert answer_possibility.max_group_size == -1
+
+    @pytest.mark.parametrize(
+        "p1, p2",
         [
-            "ABCDE",
-            ["ABCDE", "ABCED", "EDCBA"],
+            [AnswerPossibility("CRANE", []), AnswerPossibility("SLATE", [])],
             [
-                Group(["ABCDE"], (0, 0, 0, 0, 0)),
-                Group(["ABCED"], (0, 0, 0, 1, 1)),
-                Group(["EDCBA"], (1, 1, 0, 1, 1)),
+                AnswerPossibility(
+                    "CRANE",
+                    [
+                        Group(["AAAAA"], (2, 2, 0, 2, 1)),
+                        Group(["BBBBB"], (2, 1, 0, 2, 2)),
+                        Group(["CCCCC"], (2, 2, 0, 2, 2)),
+                    ],
+                ),
+                AnswerPossibility(
+                    "SLATE",
+                    [Group(["AAAAA"], (1, 2, 2, 0, 2)), Group(["BBBBB", "CCCCC"], (1, 2, 2, 2, 2))],
+                ),
+            ],
+            [
+                AnswerPossibility(
+                    "CRANE",
+                    [Group(["AAAAA", "BBBBB"], (1, 1, 1, 1, 1)), Group(["CCCCC", "DDDDD", "EEEEE"], (2, 2, 2, 2, 2))],
+                ),
+                AnswerPossibility(
+                    "SLATE",
+                    [Group(["AAAAA", "BBBBB", "CCCCC", "DDDDD"], (2, 2, 2, 2, 2)), Group(["EEEEE"], (2, 2, 2, 2, 2))],
+                ),
             ],
         ],
+        ids=["no words in groups", "more groups", "same number of groups, different sizes"],
+    )
+    def test_greater_than(self, p1, p2):
+        assert p1 > p2
+
+
+@pytest.mark.parametrize(
+    "p1, p2",
+    [
+        [
+            AnswerPossibility(
+                "CRANE",
+                [Group(["AAAAA", "BBBBB"], (1, 1, 1, 1, 1)), Group(["CCCCC", "DDDDD", "EEEEE"], (2, 2, 2, 2, 2))],
+            ),
+            AnswerPossibility(
+                "SLATE",
+                [Group(["AAAAA", "BBBBB"], (1, 1, 1, 1, 1)), Group(["CCCCC", "DDDDD", "EEEEE"], (2, 2, 2, 2, 2))],
+            ),
+        ],
+        [
+            AnswerPossibility(
+                "ADIEU",
+                [Group(["AAAAA", "BBBBB"], (1, 1, 1, 1, 1)), Group(["CCCCC", "DDDDD", "EEEEE"], (2, 2, 2, 2, 2))],
+            ),
+            AnswerPossibility(
+                "SLATE",
+                [Group(["AAAAA", "BBBBB", "CCCCC", "DDDDD"], (2, 2, 2, 2, 2)), Group(["EEEEE"], (2, 2, 2, 2, 2))],
+            ),
+        ],
     ],
+    ids=["has remaining word", "smaller groups"],
 )
-def test_generate_groups_real_possibilities_only(given_word, remaining_words, expected):
-    assert generate_groups(given_word, remaining_words) == expected
+def test_calculate_fitness_score(p1, p2):
+    remaining_words = ["CRANE", "AAAAA", "BBBBB"]
+
+    score_1 = calculate_fitness_score(p1, remaining_words)
+    score_2 = calculate_fitness_score(p2, remaining_words)
+    assert score_1 > score_2
 
 
-def test_create_chunks():
-    in_list = [f"{i:02d}" for i in range(23)]
-    chunks = list(create_chunks(in_list, 10))
-    assert chunks[0] == ["00", "01", "02", "03", "04", "05", "06", "07", "08", "09"]
-    assert chunks[1] == ["10", "11", "12", "13", "14", "15", "16", "17", "18", "19"]
-    assert chunks[2] == ["20", "21", "22"]
+class TestPuzzle:
+    def test_init(self):
+        puzzle = Puzzle()
+        assert puzzle.correct_letters == ["", "", "", "", ""]
+        assert puzzle.misplaced_letters == []
+        assert puzzle.incorrect_letters == []
+        assert puzzle.all_answers == []
+        assert puzzle.all_answers_dict == {}
+
+    def test_make_guess(self):
+        puzzle = Puzzle()
+        # Pare down the list of remaining words so the test doesn't take as long
+        puzzle.remaining_words = [
+            "AFTER",
+            "CARET",
+            "CATER",
+            "GATER",
+            "HATER",
+            "MATEY",
+            "WATER",
+        ]
+        puzzle.make_guess("TREED", "MMNYN")
+        assert "WATER" in puzzle.remaining_words
+        assert puzzle.correct_letters == ["", "", "", "E", ""]
+        assert puzzle.misplaced_letters == [("T", 0), ("R", 1)]
+        assert puzzle.incorrect_letters == ["D"]
+
+    def test_is_solved(self):
+        puzzle = Puzzle()
+        assert not puzzle.is_solved
+
+        puzzle.correct_letters = ["C", "", "", "", ""]
+        assert not puzzle.is_solved
+
+        puzzle.correct_letters = ["C", "R", "A", "N", "E"]
+        assert puzzle.is_solved
 
 
 @pytest.mark.parametrize(
@@ -143,23 +236,59 @@ def test_create_chunks():
         "full",
     ],
 )
-def test_filter(words, correct_letters, incorrect_letters, misplaced_letters, expected):
+def test_filter_words(words, correct_letters, incorrect_letters, misplaced_letters, expected):
     result = filter_words(words, correct_letters, misplaced_letters, incorrect_letters)
     assert result == expected
 
 
-class TestPuzzle:
-    def test_init(self):
-        puzzle = Puzzle()
-        assert puzzle.correct_letters == ["", "", "", "", ""]
-        assert puzzle.misplaced_letters == []
-        assert puzzle.incorrect_letters == []
-        assert puzzle.all_answers == []
-        assert puzzle.all_answers_dict == {}
+@pytest.mark.parametrize(
+    "guess, answer, expected",
+    [
+        ["ABCDE", "ABCDE", [0, 0, 0, 0, 0]],
+        ["ABCDE", "ABCED", [0, 0, 0, 1, 1]],
+        ["ABCDE", "ABCDZ", [0, 0, 0, 0, 2]],
+        ["ABCDE", "VWXYZ", [2, 2, 2, 2, 2]],
+        ["APPLE", "PPLAE", [1, 0, 1, 1, 0]],
+    ],
+)
+def test_get_wordle_feedback(guess, answer, expected):
+    assert get_wordle_feedback(guess, answer) == expected
 
-    def test_make_guess(self):
+
+@pytest.mark.parametrize(
+    "given_word, remaining_words, expected",
+    [
+        ["ABCDE", [], []],
+        [
+            "ABCDE",
+            ["ABCDE", "ABCED", "EDCBA"],
+            [
+                Group(["ABCDE"], (0, 0, 0, 0, 0)),
+                Group(["ABCED"], (0, 0, 0, 1, 1)),
+                Group(["EDCBA"], (1, 1, 0, 1, 1)),
+            ],
+        ],
+    ],
+)
+def test_generate_groups(given_word, remaining_words, expected):
+    assert generate_groups(given_word, remaining_words) == expected
+
+
+def test_create_chunks():
+    in_list = [f"{i:02d}" for i in range(23)]
+    chunks = list(create_chunks(in_list, 10))
+    assert chunks[0] == ["00", "01", "02", "03", "04", "05", "06", "07", "08", "09"]
+    assert chunks[1] == ["10", "11", "12", "13", "14", "15", "16", "17", "18", "19"]
+    assert chunks[2] == ["20", "21", "22"]
+
+
+class TestGetBestGuessMultiplePuzzles:
+    # TODO: Figure out what takes so long
+
+    def test_one_puzzle(self, mocker):
+        mock_dictionary = mocker.patch("octordle_solver.solver.dictionary")
+        mock_dictionary.words = []
         puzzle = Puzzle()
-        # Pare down the list of remaining words so the test doesn't take as long
         puzzle.remaining_words = [
             "AFTER",
             "CARET",
@@ -169,18 +298,95 @@ class TestPuzzle:
             "MATEY",
             "WATER",
         ]
+        puzzle.valid_guesses = ["WATCH", "AAAAA", "BBBBB"]
         puzzle.make_guess("TREED", "MMNYN")
-        assert "WATER" in puzzle.remaining_words
-        assert puzzle.correct_letters == ["", "", "", "E", ""]
-        assert puzzle.misplaced_letters == [("T", 0), ("R", 1)]
-        assert puzzle.incorrect_letters == ["D"]
+        best_guess = get_best_guess_multiple_puzzles([puzzle])
+        assert best_guess == "CARET"
 
-    def test_is_solved(self):
-        puzzle = Puzzle()
-        assert not puzzle.is_solved
+    def test_solve_in_one_turn(self, mocker):
+        mock_dictionary = mocker.patch("octordle_solver.solver.dictionary")
+        mock_dictionary.words = []
+        puzzle_1 = Puzzle()
+        puzzle_1.remaining_words = [
+            "AFTER",
+            "CARET",
+            "CATER",
+            "GATER",
+            "HATER",
+            "MATEY",
+            "WATER",
+        ]
+        puzzle_1.valid_guesses = ["WATCH", "AAAAA", "BBBBB"]
+        puzzle_1.make_guess("TREED", "MMNYN")
 
-        puzzle.correct_letters = ["C", "", "", "", ""]
-        assert not puzzle.is_solved
+        puzzle_2 = Puzzle()
+        puzzle_2.remaining_words = [
+            "INANE",
+        ]
+        puzzle_2.valid_guesses = ["INANE", "CCCCC", "DDDDD"]
+        puzzle_2.make_guess("CRANE", "NNYYY")
 
-        puzzle.correct_letters = ["C", "R", "A", "N", "E"]
-        assert puzzle.is_solved
+        best_guess = get_best_guess_multiple_puzzles([puzzle_1, puzzle_2])
+        assert best_guess == "INANE"
+
+    def test_solve_in_two_turns(self, mocker):
+        mock_dictionary = mocker.patch("octordle_solver.solver.dictionary")
+        mock_dictionary.words = []
+        puzzle_1 = Puzzle()
+        puzzle_1.remaining_words = [
+            "AFTER",
+            "CARET",
+            "CATER",
+            "GATER",
+            "HATER",
+            "MATEY",
+            "WATER",
+        ]
+        puzzle_1.valid_guesses = ["HATER"]
+        puzzle_1.make_guess("TREED", "MMNYN")
+
+        puzzle_2 = Puzzle()
+        puzzle_2.remaining_words = [
+            "INANE",
+            "PLANE",
+        ]
+        puzzle_2.valid_guesses = ["INANE", "CCCCC", "DDDDD"]
+        puzzle_2.make_guess("CRANE", "NNYYY")
+
+        best_guess = get_best_guess_multiple_puzzles([puzzle_1, puzzle_2])
+        assert best_guess == "INANE"
+
+    def test_solve_scoring(self, mocker):
+        mock_dictionary = mocker.patch("octordle_solver.solver.dictionary")
+        mock_dictionary.words = []
+        puzzle_1 = Puzzle()
+        puzzle_1.remaining_words = [
+            "BEECH",
+            "BELCH",
+            "BICEP",
+            "DECOY",
+            "DICED",
+            "DICEY",
+            "EDICT",
+            "EJECT",
+        ]
+        puzzle_1.valid_guesses = puzzle_1.remaining_words.copy()
+        puzzle_1.make_guess("CRANE", "MNNNM")
+
+        puzzle_2 = Puzzle()
+        puzzle_2.remaining_words = [
+            "ADMIN",
+            "ALIGN",
+            "ANGST",
+            "ANNOY",
+            "BASIN",
+            "BATON",
+            "KINDA",
+            "NAPPY",
+            "TITAN",
+            "WOMAN",
+        ]
+        puzzle_2.valid_guesses = puzzle_2.remaining_words.copy()
+        puzzle_2.make_guess("CRANE", "NNMMN")
+        best_guess = get_best_guess_multiple_puzzles([puzzle_2, puzzle_1])
+        assert best_guess == "DECOY"
