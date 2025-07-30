@@ -195,6 +195,17 @@ class Puzzle:
         """Return whether the puzzle has been solved."""
         return any(guess[1] == "YYYYY" for guess in self.guesses)
 
+    def reset(self):
+        """Reset the puzzle back to its original state."""
+        self.remaining_words = dictionary.valid_answers.copy()
+        self.valid_guesses = dictionary.valid_guesses.copy()
+        self.correct_letters = ["", "", "", "", ""]
+        self.misplaced_letters = []
+        self.incorrect_letters = []
+        self.all_answers = []
+        self.all_answers_dict = {}
+        self.guesses = []
+
 
 def filter_words(
     words: list[str],
