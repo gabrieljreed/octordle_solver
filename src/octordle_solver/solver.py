@@ -132,6 +132,7 @@ class Puzzle:
         self.incorrect_letters = []
         self.all_answers = []
         self.all_answers_dict = {}
+        self.guesses = []
 
     def make_guess(self, word: str, result: str):
         """Guess a word.
@@ -140,6 +141,8 @@ class Puzzle:
             word (str): Word that was guessed.
             result (str): Result of the word being guessed.
         """
+        self.guesses.append((word, result))
+
         # First loop, get all correct letters
         for i in range(5):
             letter = word[i]
@@ -190,7 +193,7 @@ class Puzzle:
     @property
     def is_solved(self) -> bool:
         """Return whether the puzzle has been solved."""
-        return all(letter for letter in self.correct_letters)
+        return any(guess[1] == "YYYYY" for guess in self.guesses)
 
 
 def filter_words(

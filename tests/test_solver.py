@@ -168,14 +168,24 @@ class TestPuzzle:
         assert puzzle.misplaced_letters == [("T", 0), ("R", 1)]
         assert puzzle.incorrect_letters == ["D"]
 
-    def test_is_solved(self):
+    def test_is_solved(self, mocker):
         puzzle = Puzzle()
+
+        # Mocks to make the test run faster - we're don't care about solving functionality for this test
+        puzzle.remaining_words = ["CRANE", "ABAFT", "CRAFT"]
+        puzzle.valid_guesses = puzzle.remaining_words.copy()
+        mock_dictionary = mocker.patch("octordle_solver.solver.dictionary")
+        mock_dictionary.words = []
+
         assert not puzzle.is_solved
 
-        puzzle.correct_letters = ["C", "", "", "", ""]
+        puzzle.make_guess("CRANE", "YYYNN")
         assert not puzzle.is_solved
 
-        puzzle.correct_letters = ["C", "R", "A", "N", "E"]
+        puzzle.make_guess("ABAFT", "NNYYY")
+        assert not puzzle.is_solved
+
+        puzzle.make_guess("CRAFT", "YYYYY")
         assert puzzle.is_solved
 
 
