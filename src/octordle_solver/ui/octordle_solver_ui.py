@@ -3,7 +3,7 @@
 import threading
 from typing import Any, Optional
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt
 
 from ..constants import STARTING_GUESS
@@ -51,9 +51,9 @@ class WordleGridWidget(QtWidgets.QWidget):
         self.grid_layout = QtWidgets.QGridLayout()
         self.main_layout.addLayout(self.grid_layout)
 
-        self.letter_boxes = []
+        self.letter_boxes: list[list[LetterWidget]] = []
         for row in range(self.num_rows):
-            row_boxes = []
+            row_boxes: list[LetterWidget] = []
             for col in range(5):
                 label = LetterWidget(dimensions=[60, 40])
                 self.grid_layout.addWidget(label, row, col)
@@ -146,6 +146,15 @@ class WordleGridWidget(QtWidgets.QWidget):
         remaining_words_dialog = RemainingWordsDialog(parent=self, words=self.remaining_words)
         remaining_words_dialog.show()
 
+    def reset_game(self):
+        """Reset the widget to its original state."""
+        for row in self.letter_boxes:
+            for letter_widget in row:
+                letter_widget.reset()
+
+        self._current_row = 0
+        self._current_col = 0
+
 
 class OctordleSolver(QtWidgets.QMainWindow):
     """UI for solving Octordle puzzles."""
@@ -154,28 +163,22 @@ class OctordleSolver(QtWidgets.QMainWindow):
         """Initialize the widget."""
         super().__init__()
 
-        self.puzzles = [
-            Puzzle(),
-            Puzzle(),
-            Puzzle(),
-            Puzzle(),
-            Puzzle(),
-            Puzzle(),
-            Puzzle(),
-            Puzzle(),
-        ]
+        self.num_puzzles = 8
+        self.num_guesses = 13
+
+        self.puzzles = [Puzzle() for _ in range(self.num_puzzles)]
 
         self.best_guess = STARTING_GUESS
 
         self.threadpool = QtCore.QThreadPool()
+        self.cancel_flag = threading.Event()
         self.remaining_tasks = 0
 
         self.letters_typed = 0
         self.is_first_word_guessed = False
 
-        self.cancel_flag = threading.Event()
-
         self.setup_ui()
+        self.setup_menu()
 
     def setup_ui(self):
         """Set up the UI."""
@@ -200,14 +203,7 @@ class OctordleSolver(QtWidgets.QMainWindow):
         self.all_puzzles_widget = QtWidgets.QWidget()
         self.all_puzzles_layout = QtWidgets.QGridLayout()
         self.all_puzzles_widget.setLayout(self.all_puzzles_layout)
-        self.puzzle_widgets: list[WordleGridWidget] = []
-        for i in range(8):
-            puzzle_widget = WordleGridWidget()
-            puzzle_widget.set_title(f"Puzzle {i + 1}")
-            row = i // 4
-            col = i % 4
-            self.all_puzzles_layout.addWidget(puzzle_widget, row, col)
-            self.puzzle_widgets.append(puzzle_widget)
+        self.create_puzzle_widgets()
 
         self.puzzle_scroll_area.setWidget(self.all_puzzles_widget)
 
@@ -233,9 +229,41 @@ class OctordleSolver(QtWidgets.QMainWindow):
 
         self.update_puzzle_widgets()
 
+    def create_puzzle_widgets(self):
+        """Create puzzle widgets for the number of puzzles selected."""
+        self.puzzle_widgets: list[WordleGridWidget] = []
+        for i in range(self.num_puzzles):
+            puzzle_widget = WordleGridWidget(num_rows=self.num_guesses)
+            puzzle_widget.set_title(f"Puzzle {i + 1}")
+            row = i // (self.num_puzzles // 2)
+            col = i % (self.num_puzzles // 2)
+            self.all_puzzles_layout.addWidget(puzzle_widget, row, col)
+            self.puzzle_widgets.append(puzzle_widget)
+
+        self.relayout_puzzles()
+
+    def clear_puzzle_widgets(self):
+        """Remove all puzzle widgets from the layout."""
+        while self.all_puzzles_layout.count():
+            item = self.all_puzzles_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+    def setup_menu(self):
+        """Set up the menu bar."""
+        file_menu = self.menuBar().addMenu("File")
+
+        self.reset_action = QtGui.QAction("Reset", self)
+        self.reset_action.triggered.connect(self.reset_game)
+        file_menu.addAction(self.reset_action)
+
+        self.puzzle_settings_action = QtGui.QAction("Puzzle Settings", self)
+        self.puzzle_settings_action.triggered.connect(self.open_puzzle_settings)
+        file_menu.addAction(self.puzzle_settings_action)
+
     def update_puzzle_widgets(self):
         """Update the remaining words in each puzzle widget."""
-        for i in range(8):
+        for i in range(self.num_puzzles):
             puzzle = self.puzzles[i]
             puzzle_widget = self.puzzle_widgets[i]
             puzzle_widget.set_remaining_words(puzzle.remaining_words)
@@ -315,7 +343,7 @@ class OctordleSolver(QtWidgets.QMainWindow):
 
         self.cancel_flag.clear()
 
-        self.remaining_tasks = 8
+        self.remaining_tasks = self.num_puzzles
         self.progress_dialog = QtWidgets.QProgressDialog(
             "",
             "Cancel",
@@ -329,7 +357,7 @@ class OctordleSolver(QtWidgets.QMainWindow):
         self.progress_dialog.canceled.connect(self.cancel_tasks)
         self.progress_dialog.show()
 
-        for i in range(8):
+        for i in range(self.num_puzzles):
             puzzle = self.puzzles[i]
             puzzle_widget = self.puzzle_widgets[i]
             thread_worker = ThreadWorker(
@@ -350,14 +378,14 @@ class OctordleSolver(QtWidgets.QMainWindow):
             return
 
         self.remaining_tasks -= 1
-        done = 8 - self.remaining_tasks
+        done = self.num_puzzles - self.remaining_tasks
         if self.progress_dialog:
             self.progress_dialog.setValue(done)
 
         if self.remaining_tasks == 0:
             if self.progress_dialog:
-                self.progress_dialog.setValue(8)
-            for i in range(8):
+                self.progress_dialog.setValue(self.num_puzzles)
+            for i in range(self.num_puzzles):
                 puzzle = self.puzzles[i]
                 puzzle_widget = self.puzzle_widgets[i]
                 if puzzle.is_solved:
@@ -392,6 +420,35 @@ class OctordleSolver(QtWidgets.QMainWindow):
         if self.progress_dialog:
             self.progress_dialog.cancel()
 
+    def reset_game(self):
+        """Reset the game."""
+        for puzzle_widget in self.puzzle_widgets:
+            puzzle_widget.reset_game()
+
+        for puzzle in self.puzzles:
+            puzzle.reset()
+
+        self.best_guess = STARTING_GUESS
+        self.letters_typed = 0
+        self.is_first_word_guessed = False
+
+        self.update_puzzle_widgets()
+
+    def open_puzzle_settings(self):
+        """Launch a dialog to edit puzzle settings."""
+        dialog = PuzzleSettingsDialog(self.num_puzzles, self.num_guesses)
+        if not dialog.exec_():
+            return
+
+        self.num_puzzles = dialog.num_puzzles
+        self.num_guesses = dialog.num_guesses
+
+        self.puzzles = [Puzzle() for _ in range(self.num_puzzles)]
+
+        self.clear_puzzle_widgets()
+        self.create_puzzle_widgets()
+        self.update_puzzle_widgets()
+
 
 class RemainingWordsDialog(QtWidgets.QDialog):
     """Dialog to display remaining words."""
@@ -417,3 +474,58 @@ class RemainingWordsDialog(QtWidgets.QDialog):
         self.words_list_widget = QtWidgets.QListWidget()
         layout.addWidget(self.words_list_widget)
         self.words_list_widget.addItems(self.words)
+
+
+class PuzzleSettingsDialog(QtWidgets.QDialog):
+    """Dialog to display puzzle settings."""
+
+    def __init__(self, num_puzzles: int, num_guesses: int, parent: Any = None):
+        """Dialog to display puzzle settings."""
+        super().__init__(parent)
+
+        self._num_puzzles = num_puzzles
+        self._num_guesses = num_guesses
+
+        self.setup_ui()
+
+    def setup_ui(self):
+        """Set up the UI."""
+        self.setWindowTitle("Puzzle Settings")
+
+        layout = QtWidgets.QVBoxLayout(self)
+
+        int_validator = QtGui.QIntValidator(1, 1000, self)
+
+        # Number of puzzles
+        puzzles_layout = QtWidgets.QHBoxLayout()
+        puzzles_label = QtWidgets.QLabel("Number of puzzles:")
+        self.puzzles_edit = QtWidgets.QLineEdit(str(self._num_puzzles))
+        self.puzzles_edit.setValidator(int_validator)
+        puzzles_layout.addWidget(puzzles_label)
+        puzzles_layout.addWidget(self.puzzles_edit)
+        layout.addLayout(puzzles_layout)
+
+        # Number of guesses
+        guesses_layout = QtWidgets.QHBoxLayout()
+        guesses_label = QtWidgets.QLabel("Number of guesses:")
+        self.guesses_edit = QtWidgets.QLineEdit(str(self._num_guesses))
+        self.guesses_edit.setValidator(int_validator)
+        guesses_layout.addWidget(guesses_label)
+        guesses_layout.addWidget(self.guesses_edit)
+        layout.addLayout(guesses_layout)
+
+        # Ok / Cancel buttons
+        button_box = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+
+    @property
+    def num_puzzles(self) -> int:
+        """Get the number of puzzles entered."""
+        return int(self.puzzles_edit.text())
+
+    @property
+    def num_guesses(self) -> int:
+        """Get the number of guesses entered."""
+        return int(self.guesses_edit.text())

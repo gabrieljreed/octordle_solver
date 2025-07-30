@@ -65,11 +65,14 @@ class LetterWidget(QtWidgets.QLabel):
             color (Color): The color to set.
         """
         self.current_color = color
+        text_color = "white"
+        if color == Color.WHITE:
+            text_color = "black"
         self.setStyleSheet(
             f"""
             QLabel {{
                 border: 2px solid #D3D6DA;
-                color: white;
+                color: {text_color};
                 font-size: 24px;
                 font-weight: bold;
                 text-align: center;
@@ -88,3 +91,8 @@ class LetterWidget(QtWidgets.QLabel):
         elif self.current_color == Color.GRAY:
             return PossibilityState.INCORRECT
         return PossibilityState.INVALID
+
+    def reset(self):
+        """Reset the tile to its original state."""
+        self.set_color(Color.WHITE)
+        self.setText("")

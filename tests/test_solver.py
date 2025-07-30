@@ -150,7 +150,7 @@ class TestPuzzle:
         assert puzzle.all_answers == []
         assert puzzle.all_answers_dict == {}
 
-    def test_make_guess(self):
+    def test_make_guess(self, mocker):
         puzzle = Puzzle()
         # Pare down the list of remaining words so the test doesn't take as long
         puzzle.remaining_words = [
@@ -162,6 +162,10 @@ class TestPuzzle:
             "MATEY",
             "WATER",
         ]
+        puzzle.valid_guesses = puzzle.remaining_words.copy()
+        mock_dictionary = mocker.patch("octordle_solver.solver.dictionary")
+        mock_dictionary.words = []
+
         puzzle.make_guess("TREED", "MMNYN")
         assert "WATER" in puzzle.remaining_words
         assert puzzle.correct_letters == ["", "", "", "E", ""]
@@ -187,6 +191,31 @@ class TestPuzzle:
 
         puzzle.make_guess("CRAFT", "YYYYY")
         assert puzzle.is_solved
+
+    def test_reset(self, mocker):
+        puzzle = Puzzle()
+        puzzle.remaining_words = [
+            "AFTER",
+            "CARET",
+            "CATER",
+            "GATER",
+            "HATER",
+            "MATEY",
+            "WATER",
+        ]
+        puzzle.valid_guesses = puzzle.remaining_words.copy()
+        mock_dictionary = mocker.patch("octordle_solver.solver.dictionary")
+        mock_dictionary.words = []
+
+        puzzle.make_guess("TREED", "MMNYN")
+        assert puzzle.correct_letters == ["", "", "", "E", ""]
+        assert puzzle.misplaced_letters == [("T", 0), ("R", 1)]
+        assert puzzle.incorrect_letters == ["D"]
+
+        puzzle.reset()
+        assert puzzle.correct_letters == ["", "", "", "", ""]
+        assert puzzle.misplaced_letters == []
+        assert puzzle.incorrect_letters == []
 
 
 @pytest.mark.parametrize(
