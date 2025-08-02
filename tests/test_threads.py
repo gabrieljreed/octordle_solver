@@ -1,6 +1,6 @@
 import threading
 
-from octordle_solver.ui.threading import ThreadWorker
+from octordle_solver.ui.threads import ThreadWorker
 
 
 def true_func(*args, **kwargs):

@@ -18,7 +18,7 @@ from ..solver import (
 )
 from ..utils import sanitize_words
 from .helpers import Color, LetterWidget
-from .threading import ThreadWorker
+from .threads import ThreadWorker
 
 
 class HelpDialog(QtWidgets.QDialog):
@@ -271,8 +271,8 @@ class WordleSolver(QtWidgets.QMainWindow):
 
     def debug(self):
         """Print debug values."""
-        print(f"{self._current_row = }")
-        print(f"{self._current_col = }")
+        print(f"{self._current_row=}")
+        print(f"{self._current_col=}")
 
     def _create_grid(self):
         """Create the grid of letter boxes."""

@@ -36,9 +36,9 @@ if __name__ == "__main__":
             elif state == 2:
                 incorrect_letters.append(letter)
 
-        print(f"{correct_letters = }")
-        print(f"{incorrect_letters = }")
-        print(f"{misplaced_letters = }")
+        print(f"{correct_letters=}")
+        print(f"{incorrect_letters=}")
+        print(f"{misplaced_letters=}")
 
         remaining_words = filter_words(
             dictionary.valid_answers.copy(),
@@ -46,7 +46,7 @@ if __name__ == "__main__":
             misplaced_letters,
             incorrect_letters,
         )
-        print(f"{len(remaining_words) = }")
+        print(f"{len(remaining_words)=}")
         if len(remaining_words) == 0:
             print(f"No remaining words for {possibility}")
             num_invalid_states += 1
@@ -63,7 +63,7 @@ if __name__ == "__main__":
         print(possibility_key, guesses[0].word)
 
     print(best_second_guesses)
-    print(f"{num_invalid_states = }")
+    print(f"{num_invalid_states=}")
 
     end_time = time.time()
 

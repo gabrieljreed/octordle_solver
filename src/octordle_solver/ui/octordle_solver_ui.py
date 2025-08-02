@@ -9,7 +9,7 @@ from PySide6.QtCore import Qt
 from ..constants import STARTING_GUESS
 from ..solver import PossibilityState, Puzzle, get_best_guess_multiple_puzzles
 from .helpers import Color, LetterWidget
-from .threading import ThreadWorker
+from .threads import ThreadWorker
 
 
 class WordleGridWidget(QtWidgets.QWidget):

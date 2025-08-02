@@ -16,7 +16,7 @@ with open(dictionary_path, "r") as f:
     words = f.readlines()
 words = [word.strip() for word in words]
 
-print(f"{len(words) = }")
+print(f"{len(words)=}")
 filtered_words = []
 short_words = 0
 center_letter_missing = 0
@@ -47,11 +47,11 @@ for word in words:
 
     filtered_words.append(word)
 
-print(f"{short_words = }")
-print(f"{center_letter_missing = }")
-print(f"{using_other_letters = }")
-print(f"{misspelled_words = }")
-print(f"{len(filtered_words) = }")
+print(f"{short_words=}")
+print(f"{center_letter_missing=}")
+print(f"{using_other_letters=}")
+print(f"{misspelled_words=}")
+print(f"{len(filtered_words)=}")
 
 for word in filtered_words:
     print(word)
@@ -67,4 +67,4 @@ for word in filtered_words:
         continue
     panagrams.append(word)
 
-print(f"{panagrams = }")
+print(f"{panagrams=}")
