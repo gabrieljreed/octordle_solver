@@ -1,5 +1,6 @@
 """Threading UI utilities."""
 
+import os
 import sys
 import threading
 import traceback
@@ -42,7 +43,9 @@ class ThreadWorker(QtCore.QRunnable):
             result = self.fn(*self.args, **self.kwargs)
 
         except Exception:
-            traceback.print_exc()
+            if "PYTEST_CURRENT_TEST" not in os.environ:  # pragma: no cover
+                # Don't print if running tests
+                traceback.print_exc()
             exctype, value = sys.exc_info()[:2]
             self.signals.error.emit((exctype, value, traceback.format_exc()))
         else:

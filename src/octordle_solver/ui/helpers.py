@@ -96,3 +96,4 @@ class LetterWidget(QtWidgets.QLabel):
         """Reset the tile to its original state."""
         self.set_color(Color.WHITE)
         self.setText("")
+        self.letter_is_set = False

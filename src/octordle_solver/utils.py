@@ -1,7 +1,6 @@
 """Utility functions."""
 
 import os
-from contextlib import contextmanager
 from time import perf_counter
 
 
@@ -31,7 +30,7 @@ def sanitize_words(words: list[str]) -> list[str]:
     return sanitized_words
 
 
-class catchtime:
+class catchtime:  # pragma: no cover
     """Context manager for simple timing."""
 
     def __init__(self, title: str = "Time"):

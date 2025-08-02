@@ -86,13 +86,7 @@ class WordleGridWidget(QtWidgets.QWidget):
         if self.is_solved:
             return
         if self._current_row > self.num_rows or self._current_col != 5:
-            print("Word is not complete")
             return
-
-        word = ""
-        for i in range(5):
-            letter = self.letter_boxes[self._current_row][i].text()
-            word += letter
 
         for i in range(5):
             current_box = self.letter_boxes[self._current_row][i]
