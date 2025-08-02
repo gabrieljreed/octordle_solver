@@ -1,11 +1,9 @@
 """Wordle Clone."""
 
-import os
 import random
-from enum import Enum
-from typing import List, Optional, Set, Tuple
+from typing import Optional, Set
 
-from colorama import Back, Fore, Style
+from colorama import Back, Style
 
 from .dictionary import Dictionary
 from .solver import filter_words
@@ -42,7 +40,14 @@ class Game:
 
     def __str__(self) -> str:
         """Return a string representation of the game state."""
-        return f"Word: {self.word}\nCorrect: {self.correct_letters}\nMisplaced: {self.misplaced_letters}\nIncorrect: {self.incorrect_letters}\nRemaining words: {len(self.remaining_words)}"
+        result = [
+            f"Word: {self.word}",
+            f"Correct: {self.correct_letters}",
+            f"Misplaced: {self.misplaced_letters}",
+            f"Incorrect: {self.incorrect_letters}",
+            f"Remaining words: {len(self.remaining_words)}",
+        ]
+        return "\n".join(result)
 
     def guess(self, word: str) -> None:
         """Guess a word.

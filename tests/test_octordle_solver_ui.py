@@ -1,4 +1,4 @@
-from octordle_solver.ui.helpers import Color, LetterWidget
+from octordle_solver.ui.helpers import Color
 from octordle_solver.ui.octordle_solver_ui import (
     PuzzleSettingsDialog,
     RemainingWordsDialog,

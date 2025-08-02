@@ -46,7 +46,7 @@ class catchtime:  # pragma: no cover
         self.start = perf_counter()
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, err_type, value, traceback):
         """Exit the context manager."""
         self.time = perf_counter() - self.start
         self.readout = f"{self.title}: {self.time:3f} seconds"

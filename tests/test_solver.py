@@ -11,9 +11,7 @@ from octordle_solver.solver import (
     generate_groups,
     get_best_guess_multiple_puzzles,
     get_wordle_feedback,
-    pretty_print_group,
 )
-from octordle_solver.utils import catchtime
 
 GROUP_1 = Group(["DATER"], (2, 2, 2, 0, 1))
 GROUP_2 = Group(["EATER"], (2, 1, 2, 0, 2))

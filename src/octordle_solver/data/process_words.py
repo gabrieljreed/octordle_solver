@@ -1,6 +1,5 @@
 """Process all words."""
 
-import re
 from pathlib import Path
 
 import enchant
