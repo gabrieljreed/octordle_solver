@@ -14,3 +14,7 @@ octordle-solver-ui
 pip install -r requirements/dev.txt
 pytest
 ```
+
+## Writeups
+
+Check out the writeups I made for the [Wordle solver](https://www.gabrieljreed.com/projects/wordle-solver/) and [Octordle solver](https://www.gabrieljreed.com/projects/octordle-solver/) on my dev blog!
