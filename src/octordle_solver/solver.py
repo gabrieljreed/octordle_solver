@@ -143,37 +143,8 @@ class Puzzle:
         """
         self.guesses.append((word, result))
 
-        # First loop, get all correct letters
-        for i in range(5):
-            letter = word[i]
-            if result[i] == "Y":
-                self.correct_letters[i] = letter
-
-        # Second loop, get all misplaced letters
-        for i in range(5):
-            letter = word[i]
-            if result[i] == "M":
-                self.misplaced_letters.append((letter, i))
-
-        # Third loop, get all incorrect letters
-        for i in range(5):
-            letter = word[i]
-            if letter in self.correct_letters:
-                continue
-
-            misplaced_letters = [m[0] for m in self.misplaced_letters]
-            if letter in misplaced_letters:
-                continue
-
-            if result[i] == "N":
-                self.incorrect_letters.append(letter)
-
-        self.remaining_words = filter_words(
-            self.remaining_words,
-            self.correct_letters,
-            self.misplaced_letters,
-            self.incorrect_letters,
-        )
+        self._update_game_state(word, result)
+        self._filter_words()
 
         self.get_all_answers()
 
@@ -205,6 +176,46 @@ class Puzzle:
         self.all_answers = []
         self.all_answers_dict = {}
         self.guesses = []
+
+    def _update_game_state(self, word: str, result: str):
+        """Update the game state (correct, misplaced, and incorrect letters)."""
+        # First loop, get all correct letters
+        for i in range(5):
+            letter = word[i]
+            if result[i] == "Y":
+                self.correct_letters[i] = letter
+
+        # Second loop, get all misplaced letters
+        for i in range(5):
+            letter = word[i]
+            if result[i] == "M":
+                self.misplaced_letters.append((letter, i))
+
+        # Third loop, get all incorrect letters
+        for i in range(5):
+            letter = word[i]
+            if letter in self.correct_letters:
+                if (letter, i) not in self.misplaced_letters and self.correct_letters[i] != letter:
+                    self.misplaced_letters.append((letter, i))
+                continue
+
+            misplaced_letters = [m[0] for m in self.misplaced_letters]
+            if letter in misplaced_letters:
+                if (letter, i) not in self.misplaced_letters:
+                    self.misplaced_letters.append((letter, i))
+                continue
+
+            if result[i] == "N":
+                self.incorrect_letters.append(letter)
+
+    def _filter_words(self):
+        """Filter the remaining words based on the current game state."""
+        self.remaining_words = filter_words(
+            self.remaining_words,
+            self.correct_letters,
+            self.misplaced_letters,
+            self.incorrect_letters,
+        )
 
 
 def filter_words(

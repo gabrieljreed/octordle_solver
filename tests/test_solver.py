@@ -148,6 +148,26 @@ class TestPuzzle:
         assert puzzle.all_answers == []
         assert puzzle.all_answers_dict == {}
 
+    def test_update_game_state_duplicate_letters(self):
+        puzzle = Puzzle()
+        puzzle.remaining_words = [
+            "ABBEY",
+            "ANNEX",
+            "APNEA",
+            "BEGAN",
+            "CHEAP",
+        ]
+        puzzle._update_game_state("DAMAR", "NMNNN")
+        assert puzzle.correct_letters == ["", "", "", "", ""]
+        assert puzzle.misplaced_letters == [("A", 1), ("A", 3)]
+        assert puzzle.incorrect_letters == ["D", "M", "R"]
+        puzzle._filter_words()
+        assert puzzle.remaining_words == [
+            "ABBEY",
+            "ANNEX",
+            "APNEA",
+        ]
+
     def test_make_guess(self, mocker):
         puzzle = Puzzle()
         # Pare down the list of remaining words so the test doesn't take as long
@@ -167,7 +187,7 @@ class TestPuzzle:
         puzzle.make_guess("TREED", "MMNYN")
         assert "WATER" in puzzle.remaining_words
         assert puzzle.correct_letters == ["", "", "", "E", ""]
-        assert puzzle.misplaced_letters == [("T", 0), ("R", 1)]
+        assert puzzle.misplaced_letters == [("T", 0), ("R", 1), ("E", 2)]
         assert puzzle.incorrect_letters == ["D"]
 
     def test_is_solved(self, mocker):
@@ -207,7 +227,7 @@ class TestPuzzle:
 
         puzzle.make_guess("TREED", "MMNYN")
         assert puzzle.correct_letters == ["", "", "", "E", ""]
-        assert puzzle.misplaced_letters == [("T", 0), ("R", 1)]
+        assert puzzle.misplaced_letters == [("T", 0), ("R", 1), ("E", 2)]
         assert puzzle.incorrect_letters == ["D"]
 
         puzzle.reset()
