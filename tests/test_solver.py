@@ -161,6 +161,12 @@ class TestPuzzle:
         assert puzzle.correct_letters == ["", "", "", "", ""]
         assert puzzle.misplaced_letters == [("A", 1), ("A", 3)]
         assert puzzle.incorrect_letters == ["D", "M", "R"]
+        puzzle._filter_words()
+        assert puzzle.remaining_words == [
+            "ABBEY",
+            "ANNEX",
+            "APNEA",
+        ]
 
     def test_make_guess(self, mocker):
         puzzle = Puzzle()

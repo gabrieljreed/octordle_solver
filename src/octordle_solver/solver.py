@@ -144,12 +144,7 @@ class Puzzle:
         self.guesses.append((word, result))
 
         self._update_game_state(word, result)
-        self.remaining_words = filter_words(
-            self.remaining_words,
-            self.correct_letters,
-            self.misplaced_letters,
-            self.incorrect_letters,
-        )
+        self._filter_words()
 
         self.get_all_answers()
 
@@ -212,6 +207,15 @@ class Puzzle:
 
             if result[i] == "N":
                 self.incorrect_letters.append(letter)
+
+    def _filter_words(self):
+        """Filter the remaining words based on the current game state."""
+        self.remaining_words = filter_words(
+            self.remaining_words,
+            self.correct_letters,
+            self.misplaced_letters,
+            self.incorrect_letters,
+        )
 
 
 def filter_words(
