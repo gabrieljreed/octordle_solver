@@ -357,10 +357,14 @@ class WordleSolver(QtWidgets.QMainWindow):
                 current_box = self.letter_boxes[row][col]
                 letter = current_box.text()
                 if letter in self.correct_letters:
+                    if (letter, col) not in self.misplaced_letters and self.correct_letters[col] != letter:
+                        self.misplaced_letters.append((letter, col))
                     continue
 
                 misplaced_letters = [m[0] for m in self.misplaced_letters]
                 if letter in misplaced_letters:
+                    if (letter, col) not in self.misplaced_letters:
+                        self.misplaced_letters.append((letter, col))
                     continue
 
                 if current_box.state == PossibilityState.INCORRECT:
