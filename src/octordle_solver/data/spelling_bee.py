@@ -5,8 +5,12 @@ from pathlib import Path
 import enchant
 
 # PUZZLE INPUT
-CENTER_LETTER = "O"
-OTHER_LETTERS = ["T", "I", "M", "A", "R", "V"]
+CENTER_LETTER = "D"
+OTHER_LETTERS = "AILVNU"
+
+CHECK_SPELLING = False
+
+other_letters = [char for char in OTHER_LETTERS]
 
 dictionary = enchant.Dict("en_US")
 dictionary_path = Path(__file__).parent / "Collins Scrabble Words (2019).txt"
@@ -33,7 +37,7 @@ for word in words:
 
     valid = True
     for letter in word:
-        if letter not in OTHER_LETTERS and letter != CENTER_LETTER:
+        if letter not in other_letters and letter != CENTER_LETTER:
             valid = False
             break
 
@@ -41,9 +45,10 @@ for word in words:
         using_other_letters += 1
         continue
 
-    if not dictionary.check(word.strip()):
-        misspelled_words += 1
-        continue
+    if CHECK_SPELLING:
+        if not dictionary.check(word.strip()):
+            misspelled_words += 1
+            continue
 
     filtered_words.append(word)
 
@@ -59,7 +64,7 @@ for word in filtered_words:
 panagrams = []
 for word in filtered_words:
     valid = True
-    for letter in OTHER_LETTERS:
+    for letter in other_letters:
         if letter not in word:
             valid = False
             break
