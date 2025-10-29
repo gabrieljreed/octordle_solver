@@ -4,9 +4,13 @@ from collections import defaultdict
 from itertools import chain
 from pathlib import Path
 
-CIRCLE_1 = ["O", "R"]
-CIRCLE_2 = ["C", "E", "H"]
-CIRCLE_3 = ["B", "R", "U"]
+CIRCLE_1 = "IR"
+CIRCLE_2 = "ALT"
+CIRCLE_3 = "ENM"
+
+_CIRCLE_1 = [char for char in CIRCLE_1]
+_CIRCLE_2 = [char for char in CIRCLE_2]
+_CIRCLE_3 = [char for char in CIRCLE_3]
 
 
 dictionary_path = Path(__file__).parent / "Collins Scrabble Words (2019).txt"
@@ -33,7 +37,7 @@ def get_words_for_circles(circles: list[list[str]]):
     return words
 
 
-get_words_for_circles([CIRCLE_1, CIRCLE_2])
-get_words_for_circles([CIRCLE_2, CIRCLE_3])
-get_words_for_circles([CIRCLE_1, CIRCLE_3])
-get_words_for_circles([CIRCLE_1, CIRCLE_2, CIRCLE_3])
+get_words_for_circles([_CIRCLE_1, _CIRCLE_2])
+get_words_for_circles([_CIRCLE_2, _CIRCLE_3])
+get_words_for_circles([_CIRCLE_1, _CIRCLE_3])
+get_words_for_circles([_CIRCLE_1, _CIRCLE_2, _CIRCLE_3])
