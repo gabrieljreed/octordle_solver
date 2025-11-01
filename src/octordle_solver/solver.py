@@ -134,7 +134,7 @@ class Puzzle:
         self.all_answers_dict = {}
         self.guesses = []
 
-    def make_guess(self, word: str, result: str):
+    def make_guess(self, word: str, result: Union[str, list[int]]):
         """Guess a word.
 
         Args:
@@ -177,18 +177,18 @@ class Puzzle:
         self.all_answers_dict = {}
         self.guesses = []
 
-    def _update_game_state(self, word: str, result: str):
+    def _update_game_state(self, word: str, result: Union[str, list[int]]):
         """Update the game state (correct, misplaced, and incorrect letters)."""
         # First loop, get all correct letters
         for i in range(5):
             letter = word[i]
-            if result[i] == "Y":
+            if result[i] == "Y" or result[i] == PossibilityState.CORRECT.value:
                 self.correct_letters[i] = letter
 
         # Second loop, get all misplaced letters
         for i in range(5):
             letter = word[i]
-            if result[i] == "M":
+            if result[i] == "M" or result[i] == PossibilityState.MISPLACED.value:
                 self.misplaced_letters.append((letter, i))
 
         # Third loop, get all incorrect letters
@@ -205,7 +205,7 @@ class Puzzle:
                     self.misplaced_letters.append((letter, i))
                 continue
 
-            if result[i] == "N":
+            if result[i] == "N" or result[i] == PossibilityState.INCORRECT.value:
                 self.incorrect_letters.append(letter)
 
     def _filter_words(self):
