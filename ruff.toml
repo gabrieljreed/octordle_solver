@@ -1,0 +1,16 @@
+exclude = [
+    ".git",
+    "dist",
+    "site-packages",
+    "venv",
+]
+line-length = 119
+indent-width = 4
+
+[lint]
+ignore = ["D105"]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

@@ -22,7 +22,6 @@ if __name__ == "__main__":
     start_time = time.time()
 
     for possibility in all_possibilities:
-
         correct_letters = ["", "", "", "", ""]
         incorrect_letters = []
         misplaced_letters = []
