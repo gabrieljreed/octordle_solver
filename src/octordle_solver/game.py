@@ -2,6 +2,7 @@
 
 import random
 from typing import Optional, Set
+from collections import defaultdict
 
 from colorama import Back, Style
 
@@ -32,6 +33,8 @@ class Game:
         self.correct_letters: list[str] = ["", "", "", "", ""]
         self.misplaced_letters: list[tuple[str, int]] = []
         self.incorrect_letters: list[str] = []
+        self._letter_min_counts: defaultdict[str, int] = defaultdict(int)
+        self._letter_max_counts: dict[str, int] = {}
 
         self.remaining_words = self.dictionary.words.copy()
 
@@ -96,7 +99,11 @@ class Game:
         """Play the game."""
         while True:
             self.remaining_words = filter_words(
-                self.remaining_words, self.correct_letters, self.misplaced_letters, self.incorrect_letters
+                self.remaining_words,
+                self.correct_letters,
+                self.misplaced_letters,
+                self._letter_min_counts,
+                self._letter_max_counts,
             )
             print(f"({len(self.remaining_words)}) words remaining")
             guess = input("Enter a guess: ")

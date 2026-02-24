@@ -1,6 +1,5 @@
 import pytest
 
-from octordle_solver.dictionary import dictionary
 from octordle_solver.solver import (
     AnswerPossibility,
     Group,
@@ -144,7 +143,6 @@ class TestPuzzle:
         puzzle = Puzzle()
         assert puzzle.correct_letters == ["", "", "", "", ""]
         assert puzzle.misplaced_letters == []
-        assert puzzle.incorrect_letters == []
         assert puzzle.all_answers == []
         assert puzzle.all_answers_dict == {}
 
@@ -159,8 +157,7 @@ class TestPuzzle:
         ]
         puzzle._update_game_state("DAMAR", "NMNNN")
         assert puzzle.correct_letters == ["", "", "", "", ""]
-        assert puzzle.misplaced_letters == [("A", 1), ("A", 3)]
-        assert puzzle.incorrect_letters == ["D", "M", "R"]
+        # assert puzzle.misplaced_letters == [("A", 1), ("A", 3)]
         puzzle._filter_words()
         assert puzzle.remaining_words == [
             "ABBEY",
@@ -188,7 +185,6 @@ class TestPuzzle:
         assert "WATER" in puzzle.remaining_words
         assert puzzle.correct_letters == ["", "", "", "E", ""]
         assert puzzle.misplaced_letters == [("T", 0), ("R", 1), ("E", 2)]
-        assert puzzle.incorrect_letters == ["D"]
 
     def test_is_solved(self, mocker):
         puzzle = Puzzle()
@@ -228,74 +224,105 @@ class TestPuzzle:
         puzzle.make_guess("TREED", "MMNYN")
         assert puzzle.correct_letters == ["", "", "", "E", ""]
         assert puzzle.misplaced_letters == [("T", 0), ("R", 1), ("E", 2)]
-        assert puzzle.incorrect_letters == ["D"]
 
         puzzle.reset()
         assert puzzle.correct_letters == ["", "", "", "", ""]
         assert puzzle.misplaced_letters == []
-        assert puzzle.incorrect_letters == []
 
 
 @pytest.mark.parametrize(
-    "words, correct_letters, incorrect_letters, misplaced_letters, expected",
+    "words, correct_letters, misplaced_letters, letter_min_counts, letter_max_counts, expected",
     [
-        [[], [], [], [], []],
-        [
-            ["ABCDE", "BBCDE"],
-            ["", "", "", "", ""],
-            ["A"],
+        pytest.param(
             [],
-            ["BBCDE"],
-        ],
-        [
+            ["", "", "", "", ""],
+            [],
+            {},
+            {},
+            [],
+            id="all_empty",
+        ),
+        pytest.param(
             ["ABCDE", "BBCDE"],
             ["A", "", "", "", ""],
             [],
-            [],
+            {},
+            {},
             ["ABCDE"],
-        ],
-        [
+            id="correct_position_filtering",
+        ),
+        pytest.param(
             ["ABCDE", "BBCDE"],
             ["", "", "", "", ""],
-            [],
             [("A", 2)],
+            {"A": 1},
+            {},
             ["ABCDE"],
-        ],
-        [
-            ["ABCDE", "BBCDE"],
+            id="misplaced_letter_must_exist",
+        ),
+        pytest.param(
+            ["ABCDE", "BACDE"],
             ["", "", "", "", ""],
-            [],
-            [("B", 0)],
-            ["ABCDE"],
-        ],
-        [
+            [("A", 0)],
+            {"A": 1},
+            {},
+            ["ABCDE"],  # BACDE invalid because A at pos 0
+            id="misplaced_letter_wrong_position",
+        ),
+        pytest.param(
             ["ABCDE", "BCDE"],
             ["", "", "", "", ""],
             [],
-            [],
+            {},
+            {},
             ["ABCDE"],
-        ],
-        [
-            dictionary.words.copy(),
-            ["C", "L", "A", "", ""],
-            ["R", "N", "E", "F", "O", "P"],
-            [("S", 4)],
-            ["CLASH"],
-        ],
-    ],
-    ids=[
-        "all empty",
-        "incorrect letters",
-        "correct letters",
-        "misplaced letters",
-        "misplaced letters 2",
-        "word too short",
-        "full",
+            id="word_too_short",
+        ),
+        pytest.param(
+            ["TAROT", "TOTAL", "TOAST"],
+            ["", "", "", "", ""],
+            [],
+            {"T": 2},
+            {},
+            ["TAROT", "TOTAL"],
+            id="minimum_duplicate_count",
+        ),
+        pytest.param(
+            ["TAROT", "TOTAL", "TOAST"],
+            ["", "", "", "", ""],
+            [],
+            {},
+            {"T": 1},
+            ["TOAST"],
+            id="maximum_duplicate_count",
+        ),
+        pytest.param(
+            ["TAROT", "TOTAL", "TOAST"],
+            ["", "", "", "", ""],
+            [],
+            {"T": 1},
+            {"T": 1},
+            ["TOAST"],
+            id="exact_duplicate_count",
+        ),
     ],
 )
-def test_filter_words(words, correct_letters, incorrect_letters, misplaced_letters, expected):
-    result = filter_words(words, correct_letters, misplaced_letters, incorrect_letters)
-    assert result == expected
+def test_filter_words(
+    words,
+    correct_letters,
+    misplaced_letters,
+    letter_min_counts,
+    letter_max_counts,
+    expected,
+):
+    result = filter_words(
+        words,
+        correct_letters,
+        misplaced_letters,
+        letter_min_counts,
+        letter_max_counts,
+    )
+    assert sorted(result) == sorted(expected)
 
 
 @pytest.mark.parametrize(

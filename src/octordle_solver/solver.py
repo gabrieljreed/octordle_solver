@@ -2,7 +2,7 @@
 
 import concurrent.futures
 import json
-from collections import defaultdict
+from collections import defaultdict, Counter
 from enum import Enum
 from functools import cached_property, lru_cache
 from pathlib import Path
@@ -123,16 +123,17 @@ def calculate_fitness_score(answer_possibility: AnswerPossibility, remaining_wor
 class Puzzle:
     """Class to hold the state of a single Wordle puzzle."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the puzzle."""
-        self.remaining_words = dictionary.valid_answers.copy()
-        self.valid_guesses = dictionary.valid_guesses.copy()
-        self.correct_letters = ["", "", "", "", ""]
-        self.misplaced_letters = []
-        self.incorrect_letters = []
-        self.all_answers = []
-        self.all_answers_dict = {}
-        self.guesses = []
+        self.remaining_words: list[str] = dictionary.valid_answers.copy()
+        self.valid_guesses: list[str] = dictionary.valid_guesses.copy()
+        self.correct_letters: list[str] = ["", "", "", "", ""]
+        self.misplaced_letters: list[tuple[str, int]] = []
+        self.all_answers: list[AnswerPossibility] = []
+        self.all_answers_dict: dict[str, AnswerPossibility] = {}
+        self.guesses: list[tuple[str, str]] = []
+        self._letter_min_counts: defaultdict[str, int] = defaultdict(int)
+        self._letter_max_counts: dict[str, int] = {}
 
     def make_guess(self, word: str, result: Union[str, list[int]]):
         """Guess a word.
@@ -141,6 +142,7 @@ class Puzzle:
             word (str): Word that was guessed.
             result (str): Result of the word being guessed.
         """
+        result = self._sanitize_result(result)
         self.guesses.append((word, result))
 
         self._update_game_state(word, result)
@@ -148,11 +150,24 @@ class Puzzle:
 
         self.get_all_answers()
 
+    def _sanitize_result(self, result: Union[str, list[int]]) -> str:
+        if isinstance(result, str):
+            return result
+        mapping = {
+            PossibilityState.CORRECT.value: "Y",
+            PossibilityState.MISPLACED.value: "M",
+            PossibilityState.INCORRECT.value: "N",
+        }
+        result = "".join(mapping[r] for r in result)
+        return result
+
     def __str__(self):
         """Return the string representation of the state of the Puzzle."""
         result = f"Correct Letters: {self.correct_letters}\n"
         result += f"Misplaced Letters: {self.misplaced_letters}\n"
-        result += f"Incorrect Letters: {self.incorrect_letters}"
+        result += f"{len(self.remaining_words)} remaining words\n"
+        guesses = "\n".join([f"\t{word}: {result}" for word, result in self.guesses])  # TODO: color code this
+        result += f"Guesses:\n{guesses}"
         return result
 
     def get_all_answers(self) -> list[AnswerPossibility]:
@@ -172,41 +187,40 @@ class Puzzle:
         self.valid_guesses = dictionary.valid_guesses.copy()
         self.correct_letters = ["", "", "", "", ""]
         self.misplaced_letters = []
-        self.incorrect_letters = []
         self.all_answers = []
         self.all_answers_dict = {}
         self.guesses = []
+        self._letter_min_counts = defaultdict(int)
+        self._letter_max_counts = {}
 
-    def _update_game_state(self, word: str, result: Union[str, list[int]]):
+    def _update_game_state(self, word: str, result: str):
         """Update the game state (correct, misplaced, and incorrect letters)."""
-        # First loop, get all correct letters
+        letter_results = defaultdict(list)
+
         for i in range(5):
             letter = word[i]
-            if result[i] == "Y" or result[i] == PossibilityState.CORRECT.value:
+            state = result[i]
+            letter_results[letter].append(state)
+
+            if state == "Y":
                 self.correct_letters[i] = letter
 
-        # Second loop, get all misplaced letters
-        for i in range(5):
-            letter = word[i]
-            if result[i] == "M" or result[i] == PossibilityState.MISPLACED.value:
+            elif state == "M":
                 self.misplaced_letters.append((letter, i))
 
-        # Third loop, get all incorrect letters
-        for i in range(5):
-            letter = word[i]
-            if letter in self.correct_letters:
-                if (letter, i) not in self.misplaced_letters and self.correct_letters[i] != letter:
-                    self.misplaced_letters.append((letter, i))
-                continue
+        # Determine min/max counts per letter
+        for letter, states in letter_results.items():
+            num_correct = states.count("Y")
+            num_misplaced = states.count("M")
+            num_incorrect = states.count("N")
+            min_count = num_correct + num_misplaced
+            self._letter_min_counts[letter] = max(self._letter_min_counts[letter], min_count)
+            if num_incorrect > 0:
+                self._letter_max_counts[letter] = min_count
 
-            misplaced_letters = [m[0] for m in self.misplaced_letters]
-            if letter in misplaced_letters:
-                if (letter, i) not in self.misplaced_letters:
-                    self.misplaced_letters.append((letter, i))
-                continue
-
-            if result[i] == "N" or result[i] == PossibilityState.INCORRECT.value:
-                self.incorrect_letters.append(letter)
+        for letter, states in letter_results.items():
+            if all(s == "N" for s in states):
+                self._letter_max_counts[letter] = 0
 
     def _filter_words(self):
         """Filter the remaining words based on the current game state."""
@@ -214,7 +228,8 @@ class Puzzle:
             self.remaining_words,
             self.correct_letters,
             self.misplaced_letters,
-            self.incorrect_letters,
+            self._letter_min_counts,
+            self._letter_max_counts,
         )
 
 
@@ -222,11 +237,13 @@ def filter_words(
     words: list[str],
     correct_letters: list[str],
     misplaced_letters: list[tuple[str, int]],
-    incorrect_letters: list[str],
+    letter_min_counts,
+    letter_max_counts,
 ) -> list:
     """Filter words.
 
     Args:
+        TODO: Update!
         words (list[str]): The words to filter.
         correct_letters (list[str]): Letters in the correct position.
         misplaced_letters (list[tuple[str, int]]): Letters that are misplaced, each entry should be the letter and the
@@ -249,8 +266,13 @@ def filter_words(
         if any(word[position] == letter for letter, position in misplaced_letters):
             continue
 
-        # Check if the word contains any of the incorrect letters
-        if any(letter in word for letter in incorrect_letters):
+        word_counter = Counter(word)
+        # Minimum counts
+        if any(word_counter[letter] < count for letter, count in letter_min_counts.items()):
+            continue
+
+        # Maximum counts
+        if any(word_counter[letter] > count for letter, count in letter_max_counts.items()):
             continue
 
         filtered_words.append(word)
