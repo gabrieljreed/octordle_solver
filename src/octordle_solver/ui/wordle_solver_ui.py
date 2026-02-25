@@ -399,11 +399,11 @@ class WordleSolver(QtWidgets.QMainWindow):
             colors = []
 
             for result in possibility:
-                if result == 2:
+                if result in [2, "N"]:
                     colors.append(Color.GRAY)
-                elif result == 1:
+                elif result in [1, "M"]:
                     colors.append(Color.YELLOW)
-                elif result == 0:
+                elif result in [0, "Y"]:
                     colors.append(Color.GREEN)
 
             return colors
