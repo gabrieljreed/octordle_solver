@@ -6,7 +6,6 @@ from octordle_solver.solver import (
     Puzzle,
     calculate_fitness_score,
     create_chunks,
-    filter_words,
     generate_groups,
     get_best_guess_multiple_puzzles,
     score_guess,
@@ -216,30 +215,31 @@ class TestPuzzle:
         puzzle.make_guess("TREED", "MMNYN")
 
         puzzle.reset()
-        # TODO: assertions
+        assert puzzle.all_answers == []
+        assert puzzle.all_answers_dict == {}
+        assert puzzle.guesses == []
 
-
-@pytest.mark.parametrize(
-    "words, guess, result, expected",
-    [
-        pytest.param(
-            ["ABBEY", "ANNEX", "APNEA", "BEGAN", "CHEAP"],
-            "DAMAR",
-            "NMNNN",
-            ["ABBEY", "ANNEX"],
-            id="duplicate_A_handled_correctly_misplaced",
-        ),
-        pytest.param(
-            ["ABBEY", "ANNEX", "APNEA", "BEGAN", "CHEAP"],
-            "DAMAR",
-            "NNNYN",
-            ["BEGAN", "CHEAP"],
-            id="duplicate_A_handled_correctly_correct",
-        ),
-    ],
-)
-def test_filter_words(words, guess, result, expected):
-    assert sorted(filter_words(words, guess, result)) == sorted(expected)
+    @pytest.mark.parametrize(
+        "words, guess, result, expected",
+        [
+            pytest.param(
+                ["ABBEY", "ANNEX", "APNEA", "BEGAN", "CHEAP"],
+                "DAMAR",
+                "NMNNN",
+                ["ABBEY", "ANNEX"],
+                id="duplicate_A_handled_correctly_misplaced",
+            ),
+            pytest.param(
+                ["ABBEY", "ANNEX", "APNEA", "BEGAN", "CHEAP"],
+                "DAMAR",
+                "NNNYN",
+                ["BEGAN", "CHEAP"],
+                id="duplicate_A_handled_correctly_correct",
+            ),
+        ],
+    )
+    def test_filter_words(self, words, guess, result, expected):
+        assert sorted(Puzzle().filter_words(words, guess, result)) == sorted(expected)
 
 
 @pytest.mark.parametrize(
