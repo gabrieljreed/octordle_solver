@@ -1,14 +1,16 @@
 """Solve Wordle puzzles."""
 
+from colorama import Back, Style
 import concurrent.futures
 import json
-from collections import defaultdict
+from collections import Counter, defaultdict
 from enum import Enum
 from functools import cached_property, lru_cache
 from pathlib import Path
 from typing import Optional, Union
+from dataclasses import dataclass
 
-from colorama import Fore, Style
+from colorama import Fore
 
 from .dictionary import dictionary
 
@@ -120,19 +122,37 @@ def calculate_fitness_score(answer_possibility: AnswerPossibility, remaining_wor
     return fitness
 
 
+@dataclass
+class Guess:
+    """Simple class to hold and print guesses."""
+
+    word: str
+    result: str
+
+    def __str__(self):
+        """Return a colored string output of the guess."""
+        output_string = ""
+        for letter, result in zip(self.word, self.result):
+            if result == "Y":
+                output_string += Back.GREEN + letter + Back.RESET
+            elif result == "M":
+                output_string += Back.YELLOW + letter + Back.RESET
+            else:
+                output_string += Style.DIM + letter + Style.RESET_ALL
+        return output_string
+
+
 class Puzzle:
     """Class to hold the state of a single Wordle puzzle."""
 
-    def __init__(self):
+    def __init__(self, get_best_answer: bool = True) -> None:
         """Initialize the puzzle."""
         self.remaining_words = dictionary.valid_answers.copy()
         self.valid_guesses = dictionary.valid_guesses.copy()
-        self.correct_letters = ["", "", "", "", ""]
-        self.misplaced_letters = []
-        self.incorrect_letters = []
-        self.all_answers = []
-        self.all_answers_dict = {}
-        self.guesses = []
+        self.all_answers: list[AnswerPossibility] = []
+        self.all_answers_dict: dict[str, AnswerPossibility] = {}
+        self.guesses: list[Guess] = []
+        self._get_best_answer = get_best_answer
 
     def make_guess(self, word: str, result: Union[str, list[int]]):
         """Guess a word.
@@ -141,18 +161,29 @@ class Puzzle:
             word (str): Word that was guessed.
             result (str): Result of the word being guessed.
         """
-        self.guesses.append((word, result))
+        result = self._sanitize_result(result)
+        self.guesses.append(Guess(word, result))
+        self.remaining_words = filter_words(self.remaining_words, word, result)
+        if self._get_best_answer:
+            self.get_all_answers()
 
-        self._update_game_state(word, result)
-        self._filter_words()
-
-        self.get_all_answers()
+    def _sanitize_result(self, result: Union[str, list[int]]) -> str:
+        if isinstance(result, str):
+            return result
+        mapping = {
+            PossibilityState.CORRECT.value: "Y",
+            PossibilityState.MISPLACED.value: "M",
+            PossibilityState.INCORRECT.value: "N",
+        }
+        result = "".join(mapping[r] for r in result)
+        return result
 
     def __str__(self):
         """Return the string representation of the state of the Puzzle."""
-        result = f"Correct Letters: {self.correct_letters}\n"
-        result += f"Misplaced Letters: {self.misplaced_letters}\n"
-        result += f"Incorrect Letters: {self.incorrect_letters}"
+        result = ""
+        for guess in self.guesses:
+            result += f"\t{guess}\n"
+        result += f"{len(self.remaining_words)} remaining words"
         return result
 
     def get_all_answers(self) -> list[AnswerPossibility]:
@@ -164,98 +195,30 @@ class Puzzle:
     @property
     def is_solved(self) -> bool:
         """Return whether the puzzle has been solved."""
-        return any(guess[1] == "YYYYY" for guess in self.guesses)
+        return any(guess.result == "YYYYY" for guess in self.guesses)
 
     def reset(self):
         """Reset the puzzle back to its original state."""
         self.remaining_words = dictionary.valid_answers.copy()
         self.valid_guesses = dictionary.valid_guesses.copy()
-        self.correct_letters = ["", "", "", "", ""]
-        self.misplaced_letters = []
-        self.incorrect_letters = []
         self.all_answers = []
         self.all_answers_dict = {}
         self.guesses = []
 
-    def _update_game_state(self, word: str, result: Union[str, list[int]]):
-        """Update the game state (correct, misplaced, and incorrect letters)."""
-        # First loop, get all correct letters
-        for i in range(5):
-            letter = word[i]
-            if result[i] == "Y" or result[i] == PossibilityState.CORRECT.value:
-                self.correct_letters[i] = letter
 
-        # Second loop, get all misplaced letters
-        for i in range(5):
-            letter = word[i]
-            if result[i] == "M" or result[i] == PossibilityState.MISPLACED.value:
-                self.misplaced_letters.append((letter, i))
-
-        # Third loop, get all incorrect letters
-        for i in range(5):
-            letter = word[i]
-            if letter in self.correct_letters:
-                if (letter, i) not in self.misplaced_letters and self.correct_letters[i] != letter:
-                    self.misplaced_letters.append((letter, i))
-                continue
-
-            misplaced_letters = [m[0] for m in self.misplaced_letters]
-            if letter in misplaced_letters:
-                if (letter, i) not in self.misplaced_letters:
-                    self.misplaced_letters.append((letter, i))
-                continue
-
-            if result[i] == "N" or result[i] == PossibilityState.INCORRECT.value:
-                self.incorrect_letters.append(letter)
-
-    def _filter_words(self):
-        """Filter the remaining words based on the current game state."""
-        self.remaining_words = filter_words(
-            self.remaining_words,
-            self.correct_letters,
-            self.misplaced_letters,
-            self.incorrect_letters,
-        )
-
-
-def filter_words(
-    words: list[str],
-    correct_letters: list[str],
-    misplaced_letters: list[tuple[str, int]],
-    incorrect_letters: list[str],
-) -> list:
-    """Filter words.
+# TODO: move into Puzzle class
+def filter_words(words: list[str], guess: str, result: str) -> list:
+    """Filter words based on a guess and its result.
 
     Args:
-        words (list[str]): The words to filter.
-        correct_letters (list[str]): Letters in the correct position.
-        misplaced_letters (list[tuple[str, int]]): Letters that are misplaced, each entry should be the letter and the
-            position it is NOT found in.
-        incorrect_letters (list[str]): Letters that are incorrect (not in the word).
+        words (list[str]): List of words to filter
+        guess (str): The guess that was made
+        result (str): The result of the guess (e.g. "YNMYN")
+
+    Result:
+        list[str]: Filtered words
     """
-    filtered_words = []
-    for word in words:
-        if len(word) != 5:
-            continue
-
-        # Check if the word contains the correct letters in the correct positions
-        if any(word[i] != letter for i, letter in enumerate(correct_letters) if letter):
-            continue
-
-        # Check if the word contains the misplaced letters
-        if any(letter[0] not in word for letter in misplaced_letters):
-            continue
-
-        if any(word[position] == letter for letter, position in misplaced_letters):
-            continue
-
-        # Check if the word contains any of the incorrect letters
-        if any(letter in word for letter in incorrect_letters):
-            continue
-
-        filtered_words.append(word)
-
-    return filtered_words
+    return [word for word in words if score_guess(guess, word) == result]
 
 
 def get_cached_best_second_guess(answer_possibility: list[int]) -> Optional[str]:
@@ -312,7 +275,7 @@ def pretty_print_answer_possibility(possibility: AnswerPossibility):  # pragma: 
         pretty_print_group(group, possibility.word)
 
 
-def get_wordle_feedback(guess: str, answer: str) -> list[int]:
+def score_guess(guess: str, answer: str) -> str:
     """Simulate Wordle feedback for a guess vs the real answer.
 
     Args:
@@ -320,26 +283,34 @@ def get_wordle_feedback(guess: str, answer: str) -> list[int]:
         answer (str): The answer.
 
     Returns:
-        (list[int]): A list of 5 integers.
+        str: Result of Wordle scoring
     """
-    feedback = [PossibilityState.INCORRECT.value] * 5
-    answer_chars: list[Union[None, str]] = list(answer)
+    feedback = ["N"] * 5
+    answer_remaining = []
 
+    # First pass: mark correct letters
     for i in range(5):
         if guess[i] == answer[i]:
-            feedback[i] = PossibilityState.CORRECT.value
-            answer_chars[i] = ""  # Mark as used
+            feedback[i] = "Y"
+        else:
+            answer_remaining.append(answer[i])
 
+    remaining_counts = Counter(answer_remaining)
+
+    # Second pass: mark misplaced letters
     for i in range(5):
-        if feedback[i] == PossibilityState.INCORRECT.value and guess[i] in answer_chars:
-            feedback[i] = PossibilityState.MISPLACED.value
-            answer_chars[answer_chars.index(guess[i])] = ""  # Mark as used
+        if feedback[i] == "Y":
+            continue
+        letter = guess[i]
+        if remaining_counts[letter] > 0:
+            feedback[i] = "M"
+            remaining_counts[letter] -= 1
 
-    return feedback
+    return "".join(feedback)
 
 
 @lru_cache(maxsize=None)
-def get_wordle_feedback_cached(guess: str, answer: str) -> list[int]:
+def score_guess_cached(guess: str, answer: str) -> str:
     """Simulate Wordle feedback for a guess vs the real answer.
 
     Args:
@@ -347,9 +318,9 @@ def get_wordle_feedback_cached(guess: str, answer: str) -> list[int]:
         answer (str): The answer.
 
     Returns:
-        (list[int]): A list of 5 integers.
+        str: Result of Wordle scoring
     """
-    return get_wordle_feedback(guess, answer)
+    return score_guess(guess, answer)
 
 
 def generate_groups(given_word: str, remaining_words: list[str]):
@@ -365,7 +336,7 @@ def generate_groups(given_word: str, remaining_words: list[str]):
     groups = defaultdict(list)
 
     for word in remaining_words:
-        feedback = tuple(get_wordle_feedback_cached(given_word, word))
+        feedback = tuple(score_guess_cached(given_word, word))
         groups[feedback].append(word)
 
     return [Group(words, possibility) for possibility, words in groups.items()]

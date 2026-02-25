@@ -29,7 +29,7 @@ class WordleGridWidget(QtWidgets.QWidget):
 
         self.setup_ui()
 
-    def setup_ui(self):
+    def setup_ui(self) -> None:
         """Set up the UI."""
         self.main_layout = QtWidgets.QVBoxLayout()
         self.setLayout(self.main_layout)
@@ -174,7 +174,7 @@ class OctordleSolver(QtWidgets.QMainWindow):
         self.setup_ui()
         self.setup_menu()
 
-    def setup_ui(self):
+    def setup_ui(self) -> None:
         """Set up the UI."""
         self.setWindowTitle("Octordle Solver")
 
@@ -223,7 +223,7 @@ class OctordleSolver(QtWidgets.QMainWindow):
 
         self.update_puzzle_widgets()
 
-    def create_puzzle_widgets(self):
+    def create_puzzle_widgets(self) -> None:
         """Create puzzle widgets for the number of puzzles selected."""
         self.puzzle_widgets: list[WordleGridWidget] = []
         for i in range(self.num_puzzles):
