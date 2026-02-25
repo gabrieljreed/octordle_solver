@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Fix filtering to better handle duplicate letters
+    - Instead of storing and using constraints, use direct simulation of Wordle feedback
+- Update Wordle Solver UI, `Game`, and `compute_best_second_guesses` script to use the `Puzzle` class
+- Improve type hinting
+- Rename `compute_wordle_feedback` to `score_guess`
+
 ## [1.1.0] - 2026-02-24
 
 ### Changed
