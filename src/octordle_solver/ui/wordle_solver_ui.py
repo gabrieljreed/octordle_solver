@@ -8,12 +8,9 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt
 
 from ..constants import STARTING_GUESS
-from ..dictionary import dictionary
 from ..solver import (
-    AnswerPossibility,
+    Puzzle,
     PossibilityState,
-    filter_words,
-    get_all_answers,
     get_cached_best_second_guess,
 )
 from ..utils import sanitize_words
@@ -221,16 +218,7 @@ class WordleSolver(QtWidgets.QMainWindow):
         self._current_row = 0
         self._current_col = 0
 
-        self.guessed_word = ""
-        self.remaining_words = dictionary.valid_answers.copy()
-        self.valid_guesses = dictionary.valid_guesses.copy()
-        self.correct_letters = ["", "", "", "", ""]
-        self.misplaced_letters = []
-        self.incorrect_letters = []
-        self.possibilities = []
-
-        self.computed_guesses = [False, False, False, False, False, False]
-
+        self.puzzle = Puzzle()
         self.update_remaining_words_widget()
 
         self.threadpool = QtCore.QThreadPool()
@@ -245,13 +233,7 @@ class WordleSolver(QtWidgets.QMainWindow):
 
     def reset_game(self):
         """Reset the game back to its initial state."""
-        self.remaining_words = dictionary.valid_answers.copy()
-        self.valid_guesses = dictionary.valid_guesses.copy()
-        self.correct_letters = ["", "", "", "", ""]
-        self.misplaced_letters = []
-        self.incorrect_letters = []
-        self.possibilities = []
-        self.computed_guesses = [False, False, False, False, False, False]
+        self.puzzle.reset()
 
         self._current_row = 0
         self._current_col = 0
@@ -273,6 +255,7 @@ class WordleSolver(QtWidgets.QMainWindow):
         """Print debug values."""
         print(f"{self._current_row=}")
         print(f"{self._current_col=}")
+        print(self.puzzle)
 
     def _create_grid(self):
         """Create the grid of letter boxes."""
@@ -327,58 +310,36 @@ class WordleSolver(QtWidgets.QMainWindow):
         self._current_row += 1
         self._current_col = 0
 
-    def _update_game_state(self):
-        """Update the game state with the results of the given row."""
+    @property
+    def word(self) -> str:
+        """Return the current word."""
         word = ""
-        for row in range(6):
-            if row == self._current_row:
-                break
+        row = self.letter_boxes[self._current_row - 1]
+        for i in range(5):
+            box = row[i]
+            word += box.text()
+        return word
 
-            if self.computed_guesses[row]:
-                continue
-
-            # First loop, get all correct letters
-            for col in range(5):
-                current_box = self.letter_boxes[row][col]
-                letter = current_box.text()
-                word += letter
-                if current_box.state == PossibilityState.CORRECT:
-                    self.correct_letters[col] = letter
-
-            # Second loop, get all misplaced letters
-            for col in range(5):
-                current_box = self.letter_boxes[row][col]
-                letter = current_box.text()
-                if current_box.state == PossibilityState.MISPLACED:
-                    self.misplaced_letters.append((letter, col))
-
-            # Third loop, get all incorrect letters
-            for col in range(5):
-                current_box = self.letter_boxes[row][col]
-                letter = current_box.text()
-                if letter in self.correct_letters:
-                    if (letter, col) not in self.misplaced_letters and self.correct_letters[col] != letter:
-                        self.misplaced_letters.append((letter, col))
-                    continue
-
-                misplaced_letters = [m[0] for m in self.misplaced_letters]
-                if letter in misplaced_letters:
-                    if (letter, col) not in self.misplaced_letters:
-                        self.misplaced_letters.append((letter, col))
-                    continue
-
-                if current_box.state == PossibilityState.INCORRECT:
-                    self.incorrect_letters.append(letter)
-
-            self.guessed_word = word
-
-            self.computed_guesses[row] = True
+    @property
+    def result(self):
+        """Return the current result."""
+        result = ""
+        row = self._current_row - 1
+        for col in range(5):
+            current_box = self.letter_boxes[row][col]
+            if current_box.state == PossibilityState.CORRECT:
+                result += "Y"
+            elif current_box.state == PossibilityState.MISPLACED:
+                result += "M"
+            else:
+                result += "N"
+        return result
 
     def update_remaining_words_widget(self):
         """Update the widgets with the remaining words."""
         self.remaining_words_list.clear()
-        self.remaining_words_list.addItems(self.remaining_words)
-        self.remaining_words_label.setText(f"{len(self.remaining_words)} Remaining Word(s)")
+        self.remaining_words_list.addItems(self.puzzle.remaining_words)
+        self.remaining_words_label.setText(f"{len(self.puzzle.remaining_words)} Remaining Word(s)")
 
     def get_best_guesses(self):
         """Get the best guesses for the given game state.
@@ -388,20 +349,11 @@ class WordleSolver(QtWidgets.QMainWindow):
         if self._current_row == 0:
             return
 
-        self._update_game_state()
-        self.remaining_words = filter_words(
-            self.remaining_words,
-            self.correct_letters,
-            self.misplaced_letters,
-            self.incorrect_letters,
-        )
-
-        self.update_remaining_words_widget()
         self.best_guess_list.clear()
         self.groups_tree_widget.clear()
 
         # If it's the first guess, get the cached best second guess (if the first guess was STARTING_GUESS)
-        if self._current_row == 1 and self.guessed_word == STARTING_GUESS:
+        if self._current_row == 1 and self.word == STARTING_GUESS:
             answer_possibility: list[int] = []
             for i in range(5):
                 current_box = self.letter_boxes[0][i]
@@ -412,9 +364,9 @@ class WordleSolver(QtWidgets.QMainWindow):
                 self.best_guess_list.addItem(best_second_guess)
 
         thread_worker = ThreadWorker(
-            fn=get_all_answers,
-            remaining_words=self.remaining_words,
-            valid_guesses=self.valid_guesses,
+            fn=self.puzzle.make_guess,
+            word=self.word,
+            result=self.result,
         )
         thread_worker.signals.result.connect(self._on_get_answer_possibilities_finished)
 
@@ -424,25 +376,24 @@ class WordleSolver(QtWidgets.QMainWindow):
 
         self.threadpool.start(thread_worker)
 
-    def _on_get_answer_possibilities_finished(self, possibilities: list[AnswerPossibility]):
+    def _on_get_answer_possibilities_finished(self):
         """Update the UI when the thread worker from get_best_guesses finishes."""
-        self.possibilities = possibilities
-
         self.get_best_guess_button.setText("Get best guesses")
         self.get_best_guess_button.setDisabled(False)
+        self.update_remaining_words_widget()
 
-        for possibility in self.possibilities:
+        for possibility in self.puzzle.all_answers:
             if not self.best_guess_list.findItems(possibility.word, Qt.MatchFlag.MatchExactly):
                 self.best_guess_list.addItem(possibility.word)
 
     def update_groups_widgets(self):
         """Update the group widgets when the user picks an answer possibility."""
-        if not self.possibilities:
+        if not self.puzzle.all_answers:
             return
 
         word = self.best_guess_list.currentItem().text()
         index = self.best_guess_list.currentRow()
-        groups = self.possibilities[index].groups
+        groups = self.puzzle.all_answers[index].groups
 
         def get_word_colors(possibility) -> list[Color]:
             colors = []
@@ -510,7 +461,7 @@ class WordleSolver(QtWidgets.QMainWindow):
 
     def copy_remaining_words(self):
         """Copy the remaining words to the system clipboard."""
-        str_to_copy = "\n".join(self.remaining_words)
+        str_to_copy = "\n".join(self.puzzle.remaining_words)
         pyperclip.copy(str_to_copy)
 
     def compare_to_wordle_bot(self):
@@ -520,7 +471,7 @@ class WordleSolver(QtWidgets.QMainWindow):
             return
 
         wordle_bot_remaining_words = set(sanitize_words(compare_dialog.get_words()))
-        remaining_words_set = set(self.remaining_words)
+        remaining_words_set = set(self.puzzle.remaining_words)
         extra_words = remaining_words_set - wordle_bot_remaining_words
         missing_words = wordle_bot_remaining_words - remaining_words_set
 
