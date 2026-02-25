@@ -2,10 +2,27 @@ from octordle_solver.ui.wordle_solver_ui import CompareToWordleBotDialog, DiffDi
 from octordle_solver.ui.helpers import Color
 from octordle_solver.solver import get_cached_best_second_guess, AnswerPossibility, Group
 from octordle_solver.constants import STARTING_GUESS
+from octordle_solver.ui.helpers import get_word_colors, style_text
 from PySide6.QtCore import Qt
+from PySide6 import QtWidgets
 
 
 class TestWordleSolverUI:
+    FAKE_ANSWER_POSSIBILITIES = [
+        AnswerPossibility(
+            word="WORD1",
+            groups=[
+                Group(["AAAAA", "BBBBB", "CCCCC"], "YNMYN"),
+                Group(["XXXXX", "YYYYY", "ZZZZZ"], "NMYNM"),
+            ],
+        ),
+        AnswerPossibility(
+            word="WORD2",
+            groups=[Group(["AAAAA", "BBBBB", "CCCCC", "XXXXX", "YYYYY", "ZZZZZ"], "NMYNM")],
+        ),
+    ]
+    FAKE_REMAINING_WORDS = ["AAAAA", "BBBBB", "CCCCC", "XXXXX", "YYYYY", "ZZZZZ"]
+
     def test_init(self, qtbot):
         widget = WordleSolver()
         qtbot.addWidget(widget)
@@ -87,18 +104,8 @@ class TestWordleSolverUI:
         widget.get_best_guesses()
         mock_threadpool.start.assert_called_once()
 
-        # Mock the puzzle's all_answers with some dummy data
-        widget.puzzle.all_answers = [
-            AnswerPossibility(
-                word="WORD1",
-                groups=[Group(["AAAAA", "BBBBB", "CCCCC"], "YNMYN")],
-            ),
-            AnswerPossibility(
-                word="WORD2",
-                groups=[Group(["XXXXX", "YYYYY", "ZZZZZ"], "NMYNM")],
-            ),
-        ]
-        widget.puzzle.remaining_words = ["AAAAA", "BBBBB", "CCCCC", "XXXXX", "YYYYY", "ZZZZZ"]
+        widget.puzzle.all_answers = self.FAKE_ANSWER_POSSIBILITIES
+        widget.puzzle.remaining_words = self.FAKE_REMAINING_WORDS
         widget._on_get_answer_possibilities_finished()
         # The best guess list should now contain the words from the all_answers
         assert widget.best_guess_list.count() == 2
@@ -124,7 +131,20 @@ class TestWordleSolverUI:
         assert widget.best_guess_list.count() == 1
         assert widget.best_guess_list.item(0).text() == get_cached_best_second_guess([2, 2, 2, 2, 2])
 
-    def test_display_groups(self, qtbot): ...
+    def test_display_groups(self, qtbot):
+        widget = WordleSolver()
+        qtbot.addWidget(widget)
+        widget.puzzle.all_answers = self.FAKE_ANSWER_POSSIBILITIES
+        widget.puzzle.remaining_words = self.FAKE_REMAINING_WORDS
+        widget._on_get_answer_possibilities_finished()
+        # Select the first item in the best guess list to display its groups
+        widget.best_guess_list.setCurrentItem(widget.best_guess_list.item(0))
+        # The groups list should now show the groups for the first answer possibility
+        assert widget.groups_tree_widget.topLevelItemCount() == 2
+        item_1 = widget.groups_tree_widget.topLevelItem(0)
+        item_widget = widget.groups_tree_widget.itemWidget(item_1, 0)
+        assert isinstance(item_widget, QtWidgets.QLabel)
+        assert item_widget.text() == style_text("SLATE", get_word_colors("YNMYN"))
 
     def test_reset(self, qtbot):
         widget = WordleSolver()

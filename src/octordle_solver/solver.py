@@ -34,15 +34,15 @@ class PossibilityState(Enum):
 class Group:
     """Class to represent a group of words for a given possibility."""
 
-    def __init__(self, words: list[str], possibility):
+    def __init__(self, words: list[str], possibility: Union[list[int], str, tuple[str, ...]]) -> None:
         """Initialize the Group.
 
         Args:
             words (list[str]): List of words in the group.
-            possibility (): The answer possibility
+            possibility (Union[list[int], str, tuple[str, ...]]): The answer possibility
         """
         self.words: list[str] = words
-        self.possibility = possibility
+        self.possibility: Union[list[int], str, tuple[str, ...]] = possibility
 
     def __str__(self):
         """Return the string representation of the group."""
@@ -330,7 +330,7 @@ def generate_groups(given_word: str, remaining_words: list[str]):
     Returns:
         (list[Group]): List of groups generated.
     """
-    groups = defaultdict(list)
+    groups: dict[tuple[str, ...], list[str]] = defaultdict(list)
 
     for word in remaining_words:
         feedback = tuple(score_guess_cached(given_word, word))

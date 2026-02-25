@@ -14,7 +14,7 @@ from ..solver import (
     get_cached_best_second_guess,
 )
 from ..utils import sanitize_words
-from .helpers import Color, LetterWidget
+from .helpers import Color, LetterWidget, get_word_colors, create_colored_label
 from .threads import ThreadWorker
 
 
@@ -396,37 +396,9 @@ class WordleSolver(QtWidgets.QMainWindow):
         """Update the group widgets when the user picks an answer possibility."""
         if not self.puzzle.all_answers:
             return
-
         word = self.best_guess_list.currentItem().text()
         index = self.best_guess_list.currentRow()
         groups = self.puzzle.all_answers[index].groups
-
-        def get_word_colors(possibility) -> list[Color]:
-            colors = []
-
-            for result in possibility:
-                if result in [2, "N"]:
-                    colors.append(Color.GRAY)
-                elif result in [1, "M"]:
-                    colors.append(Color.YELLOW)
-                elif result in [0, "Y"]:
-                    colors.append(Color.GREEN)
-
-            return colors
-
-        def style_text(text, colors) -> str:
-            styled_text = ""
-            for letter, color in zip(text, colors):
-                styled_text += f'<span style="color: #{color.value}; font-weight: bold;">{letter}</span>'
-            return styled_text
-
-        def create_colored_label(text, colors: list[Color]):
-            """Create a QLabel with colored letters."""
-            label = QtWidgets.QLabel()
-            label.setText(style_text(text, colors))
-            label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-            return label
-
         self.groups_tree_widget.clear()
         for group in groups:
             item = QtWidgets.QTreeWidgetItem(self.groups_tree_widget)
