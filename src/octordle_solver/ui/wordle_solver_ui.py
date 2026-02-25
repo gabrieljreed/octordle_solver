@@ -341,7 +341,7 @@ class WordleSolver(QtWidgets.QMainWindow):
         self.remaining_words_list.addItems(self.puzzle.remaining_words)
         self.remaining_words_label.setText(f"{len(self.puzzle.remaining_words)} Remaining Word(s)")
 
-    def get_best_guesses(self):
+    def get_best_guesses(self) -> None:
         """Get the best guesses for the given game state.
 
         This function is threaded, and will call _on_get_answer_possibilities_finished when done.

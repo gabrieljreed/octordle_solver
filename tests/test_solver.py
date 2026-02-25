@@ -1,16 +1,15 @@
 import pytest
 
-from octordle_solver.dictionary import dictionary
 from octordle_solver.solver import (
     AnswerPossibility,
     Group,
+    Guess,
     Puzzle,
     calculate_fitness_score,
     create_chunks,
-    filter_words,
     generate_groups,
     get_best_guess_multiple_puzzles,
-    get_wordle_feedback,
+    score_guess,
 )
 
 GROUP_1 = Group(["DATER"], (2, 2, 2, 0, 1))
@@ -142,31 +141,8 @@ def test_calculate_fitness_score(p1, p2):
 class TestPuzzle:
     def test_init(self):
         puzzle = Puzzle()
-        assert puzzle.correct_letters == ["", "", "", "", ""]
-        assert puzzle.misplaced_letters == []
-        assert puzzle.incorrect_letters == []
         assert puzzle.all_answers == []
         assert puzzle.all_answers_dict == {}
-
-    def test_update_game_state_duplicate_letters(self):
-        puzzle = Puzzle()
-        puzzle.remaining_words = [
-            "ABBEY",
-            "ANNEX",
-            "APNEA",
-            "BEGAN",
-            "CHEAP",
-        ]
-        puzzle._update_game_state("DAMAR", "NMNNN")
-        assert puzzle.correct_letters == ["", "", "", "", ""]
-        assert puzzle.misplaced_letters == [("A", 1), ("A", 3)]
-        assert puzzle.incorrect_letters == ["D", "M", "R"]
-        puzzle._filter_words()
-        assert puzzle.remaining_words == [
-            "ABBEY",
-            "ANNEX",
-            "APNEA",
-        ]
 
     def test_make_guess(self, mocker):
         puzzle = Puzzle()
@@ -186,9 +162,21 @@ class TestPuzzle:
 
         puzzle.make_guess("TREED", "MMNYN")
         assert "WATER" in puzzle.remaining_words
-        assert puzzle.correct_letters == ["", "", "", "E", ""]
-        assert puzzle.misplaced_letters == [("T", 0), ("R", 1), ("E", 2)]
-        assert puzzle.incorrect_letters == ["D"]
+
+    def test_make_guess_duplicate_letters(self):
+        puzzle = Puzzle()
+        puzzle.remaining_words = [
+            "ABBEY",
+            "ANNEX",
+            "APNEA",
+            "BEGAN",
+            "CHEAP",
+        ]
+        puzzle.make_guess("DAMAR", "NMNNN")
+        assert puzzle.remaining_words == [
+            "ABBEY",
+            "ANNEX",
+        ]
 
     def test_is_solved(self, mocker):
         puzzle = Puzzle()
@@ -226,90 +214,50 @@ class TestPuzzle:
         mock_dictionary.words = []
 
         puzzle.make_guess("TREED", "MMNYN")
-        assert puzzle.correct_letters == ["", "", "", "E", ""]
-        assert puzzle.misplaced_letters == [("T", 0), ("R", 1), ("E", 2)]
-        assert puzzle.incorrect_letters == ["D"]
 
         puzzle.reset()
-        assert puzzle.correct_letters == ["", "", "", "", ""]
-        assert puzzle.misplaced_letters == []
-        assert puzzle.incorrect_letters == []
+        assert puzzle.all_answers == []
+        assert puzzle.all_answers_dict == {}
+        assert puzzle.guesses == []
 
-
-@pytest.mark.parametrize(
-    "words, correct_letters, incorrect_letters, misplaced_letters, expected",
-    [
-        [[], [], [], [], []],
+    @pytest.mark.parametrize(
+        "words, guess, result, expected",
         [
-            ["ABCDE", "BBCDE"],
-            ["", "", "", "", ""],
-            ["A"],
-            [],
-            ["BBCDE"],
+            pytest.param(
+                ["ABBEY", "ANNEX", "APNEA", "BEGAN", "CHEAP"],
+                "DAMAR",
+                "NMNNN",
+                ["ABBEY", "ANNEX"],
+                id="duplicate_A_handled_correctly_misplaced",
+            ),
+            pytest.param(
+                ["ABBEY", "ANNEX", "APNEA", "BEGAN", "CHEAP"],
+                "DAMAR",
+                "NNNYN",
+                ["BEGAN", "CHEAP"],
+                id="duplicate_A_handled_correctly_correct",
+            ),
         ],
-        [
-            ["ABCDE", "BBCDE"],
-            ["A", "", "", "", ""],
-            [],
-            [],
-            ["ABCDE"],
-        ],
-        [
-            ["ABCDE", "BBCDE"],
-            ["", "", "", "", ""],
-            [],
-            [("A", 2)],
-            ["ABCDE"],
-        ],
-        [
-            ["ABCDE", "BBCDE"],
-            ["", "", "", "", ""],
-            [],
-            [("B", 0)],
-            ["ABCDE"],
-        ],
-        [
-            ["ABCDE", "BCDE"],
-            ["", "", "", "", ""],
-            [],
-            [],
-            ["ABCDE"],
-        ],
-        [
-            dictionary.words.copy(),
-            ["C", "L", "A", "", ""],
-            ["R", "N", "E", "F", "O", "P"],
-            [("S", 4)],
-            ["CLASH"],
-        ],
-    ],
-    ids=[
-        "all empty",
-        "incorrect letters",
-        "correct letters",
-        "misplaced letters",
-        "misplaced letters 2",
-        "word too short",
-        "full",
-    ],
-)
-def test_filter_words(words, correct_letters, incorrect_letters, misplaced_letters, expected):
-    result = filter_words(words, correct_letters, misplaced_letters, incorrect_letters)
-    assert result == expected
+    )
+    def test_filter_words(self, words, guess, result, expected):
+        puzzle = Puzzle()
+        puzzle.remaining_words = words
+        puzzle.filter_words(Guess(guess, result))
+        assert sorted(puzzle.remaining_words) == sorted(expected)
 
 
 @pytest.mark.parametrize(
     "guess, answer, expected",
     [
-        ["ABCDE", "ABCDE", [0, 0, 0, 0, 0]],
-        ["ABCDE", "ABCED", [0, 0, 0, 1, 1]],
-        ["ABCDE", "ABCDZ", [0, 0, 0, 0, 2]],
-        ["ABCDE", "VWXYZ", [2, 2, 2, 2, 2]],
-        ["APPLE", "PPLAE", [1, 0, 1, 1, 0]],
+        ["ABCDE", "ABCDE", "YYYYY"],
+        ["ABCDE", "ABCED", "YYYMM"],
+        ["ABCDE", "ABCDZ", "YYYYN"],
+        ["ABCDE", "VWXYZ", "NNNNN"],
+        ["APPLE", "PPLAE", "MYMMY"],
     ],
 )
-def test_get_wordle_feedback(guess, answer, expected):
-    assert get_wordle_feedback(guess, answer) == expected
+def test_score_guess(guess, answer, expected):
+    assert score_guess(guess, answer) == expected
 
 
 @pytest.mark.parametrize(
@@ -320,9 +268,9 @@ def test_get_wordle_feedback(guess, answer, expected):
             "ABCDE",
             ["ABCDE", "ABCED", "EDCBA"],
             [
-                Group(["ABCDE"], (0, 0, 0, 0, 0)),
-                Group(["ABCED"], (0, 0, 0, 1, 1)),
-                Group(["EDCBA"], (1, 1, 0, 1, 1)),
+                Group(["ABCDE"], ("Y", "Y", "Y", "Y", "Y")),
+                Group(["ABCED"], ("Y", "Y", "Y", "M", "M")),
+                Group(["EDCBA"], ("M", "M", "Y", "M", "M")),
             ],
         ],
     ],

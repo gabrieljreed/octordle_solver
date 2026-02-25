@@ -6,7 +6,7 @@ from pathlib import Path
 from colorama import Fore
 
 from octordle_solver.dictionary import dictionary
-from octordle_solver.solver import Puzzle, get_wordle_feedback_cached
+from octordle_solver.solver import Puzzle, score_guess_cached
 from octordle_solver.utils import catchtime
 
 STARTING_WORD = "SLATE"
@@ -37,7 +37,7 @@ def play_game_for_word(answer: str, starting_word: str):
     while True:
         guesses.append(guess)
         num_guesses += 1
-        result = get_wordle_feedback_cached(guess, answer)
+        result = score_guess_cached(guess, answer)
         print_word(guess, answer)
         if result == [0, 0, 0, 0, 0]:
             break

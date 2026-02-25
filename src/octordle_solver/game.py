@@ -6,7 +6,7 @@ from typing import Optional, Set
 from colorama import Back, Style
 
 from .dictionary import Dictionary
-from .solver import filter_words
+from .solver import Puzzle, score_guess
 from .utils import clear_screen
 
 
@@ -24,6 +24,8 @@ class Game:
             self.word = random.choice(self.dictionary.words)
         else:
             self.word = word
+
+        self.puzzle = Puzzle(get_best_answer=False)
 
         self.guessed_letters: Set[str] = set()
         self.guessed_words: list[str] = []
@@ -55,13 +57,17 @@ class Game:
         Args:
             word (str): The word to guess.
         """
-        word = word.upper()
+        result = score_guess(word, self.word)
+        self.puzzle.make_guess(word, result)
         self.parse_guess(word)
         self.guessed_words.append(word)
         if self._clear_screen:
             clear_screen()
-        for word in self.guessed_words:
-            self.print_word(word)
+        for guess in self.puzzle.guesses:
+            print(guess)
+
+    def _sanitize_guess(self, word: str) -> str:
+        return word.upper()
 
     def parse_guess(self, guess: str) -> None:
         """Parse the guess into correct, misplaced, and incorrect letters.
@@ -94,12 +100,11 @@ class Game:
 
     def play(self) -> None:
         """Play the game."""
+        if self._clear_screen:
+            clear_screen()
         while True:
-            self.remaining_words = filter_words(
-                self.remaining_words, self.correct_letters, self.misplaced_letters, self.incorrect_letters
-            )
-            print(f"({len(self.remaining_words)}) words remaining")
-            guess = input("Enter a guess: ")
+            print(f"({len(self.puzzle.remaining_words)}) words remaining")
+            guess = self._sanitize_guess(input("Enter a guess: "))
             self.guess(guess)
             if guess == self.word:
                 print("You win!")
