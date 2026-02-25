@@ -1,3 +1,3 @@
 """Constants for Wordle Solver."""
 
-STARTING_GUESS = "CRANE"
+STARTING_GUESS = "SLATE"
