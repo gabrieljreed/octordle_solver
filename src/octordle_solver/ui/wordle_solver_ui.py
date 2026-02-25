@@ -14,7 +14,7 @@ from ..solver import (
     get_cached_best_second_guess,
 )
 from ..utils import sanitize_words
-from .helpers import Color, LetterWidget
+from .helpers import Color, LetterWidget, get_word_colors, create_colored_label
 from .threads import ThreadWorker
 
 
@@ -28,7 +28,7 @@ class HelpDialog(QtWidgets.QDialog):
 
         layout = QtWidgets.QVBoxLayout(self)
 
-        instructions_label = QtWidgets.QLabel(
+        self.instructions_label = QtWidgets.QLabel(
             "Welcome to the Wordle Solver!\n\n"
             "Enter your guess by typing. When you're finished, press Enter.\n"
             '(Alternatively, double click a guess from the "Best Guesses" list.)\n'
@@ -49,12 +49,12 @@ class HelpDialog(QtWidgets.QDialog):
             "Happy Solving!"
             "\n"
         )
-        instructions_label.setWordWrap(True)
-        layout.addWidget(instructions_label)
+        self.instructions_label.setWordWrap(True)
+        layout.addWidget(self.instructions_label)
 
-        close_button = QtWidgets.QPushButton("Close")
-        close_button.clicked.connect(self.accept)
-        layout.addWidget(close_button)
+        self.close_button = QtWidgets.QPushButton("Close")
+        self.close_button.clicked.connect(self.accept)
+        layout.addWidget(self.close_button)
 
 
 class CompareToWordleBotDialog(QtWidgets.QDialog):
@@ -113,16 +113,16 @@ class DiffDialog(QtWidgets.QDialog):
         extra_words_layout = QtWidgets.QVBoxLayout()
         list_layout.addLayout(extra_words_layout)
         extra_words_layout.addWidget(QtWidgets.QLabel("Extra Words"))
-        extra_words_list = QtWidgets.QListWidget(self)
-        extra_words_list.addItems(extra_words)
-        extra_words_layout.addWidget(extra_words_list)
+        self.extra_words_list = QtWidgets.QListWidget(self)
+        self.extra_words_list.addItems(extra_words)
+        extra_words_layout.addWidget(self.extra_words_list)
 
         missing_words_layout = QtWidgets.QVBoxLayout()
         list_layout.addLayout(missing_words_layout)
         missing_words_layout.addWidget(QtWidgets.QLabel("Missing Words"))
-        missing_words_list = QtWidgets.QListWidget(self)
-        missing_words_list.addItems(missing_words)
-        missing_words_layout.addWidget(missing_words_list)
+        self.missing_words_list = QtWidgets.QListWidget(self)
+        self.missing_words_list.addItems(missing_words)
+        missing_words_layout.addWidget(self.missing_words_list)
 
         self.button_box = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok, self)
         self.button_box.accepted.connect(self.accept)
@@ -323,8 +323,10 @@ class WordleSolver(QtWidgets.QMainWindow):
     @property
     def result(self):
         """Return the current result."""
-        result = ""
         row = self._current_row - 1
+        if row < 0 or row >= len(self.letter_boxes):
+            return ""
+        result = ""
         for col in range(5):
             current_box = self.letter_boxes[row][col]
             if current_box.state == PossibilityState.CORRECT:
@@ -352,16 +354,7 @@ class WordleSolver(QtWidgets.QMainWindow):
         self.best_guess_list.clear()
         self.groups_tree_widget.clear()
 
-        # If it's the first guess, get the cached best second guess (if the first guess was STARTING_GUESS)
-        if self._current_row == 1 and self.word == STARTING_GUESS:
-            answer_possibility: list[int] = []
-            for i in range(5):
-                current_box = self.letter_boxes[0][i]
-                answer_possibility.append(current_box.state.value)
-
-            best_second_guess = get_cached_best_second_guess(answer_possibility)
-            if best_second_guess:
-                self.best_guess_list.addItem(best_second_guess)
+        self._get_cached_second_guess()
 
         thread_worker = ThreadWorker(
             fn=self.puzzle.make_guess,
@@ -375,6 +368,19 @@ class WordleSolver(QtWidgets.QMainWindow):
         self.original_style_sheet = self.styleSheet()
 
         self.threadpool.start(thread_worker)
+
+    def _get_cached_second_guess(self) -> None:
+        """Get the cached second guess if available."""
+        if not self._can_get_cached_second_guess():
+            return
+        answer_possibility = [self.letter_boxes[0][i].state.value for i in range(5)]
+        best_second_guess = get_cached_best_second_guess(answer_possibility)
+        if best_second_guess:
+            self.best_guess_list.addItem(best_second_guess)
+
+    def _can_get_cached_second_guess(self) -> bool:
+        """Check if we can get a cached second guess based on the current game state."""
+        return self._current_row == 1 and self.word == STARTING_GUESS
 
     def _on_get_answer_possibilities_finished(self):
         """Update the UI when the thread worker from get_best_guesses finishes."""
@@ -390,37 +396,9 @@ class WordleSolver(QtWidgets.QMainWindow):
         """Update the group widgets when the user picks an answer possibility."""
         if not self.puzzle.all_answers:
             return
-
         word = self.best_guess_list.currentItem().text()
         index = self.best_guess_list.currentRow()
         groups = self.puzzle.all_answers[index].groups
-
-        def get_word_colors(possibility) -> list[Color]:
-            colors = []
-
-            for result in possibility:
-                if result in [2, "N"]:
-                    colors.append(Color.GRAY)
-                elif result in [1, "M"]:
-                    colors.append(Color.YELLOW)
-                elif result in [0, "Y"]:
-                    colors.append(Color.GREEN)
-
-            return colors
-
-        def style_text(text, colors) -> str:
-            styled_text = ""
-            for letter, color in zip(text, colors):
-                styled_text += f'<span style="color: #{color.value}; font-weight: bold;">{letter}</span>'
-            return styled_text
-
-        def create_colored_label(text, colors: list[Color]):
-            """Create a QLabel with colored letters."""
-            label = QtWidgets.QLabel()
-            label.setText(style_text(text, colors))
-            label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-            return label
-
         self.groups_tree_widget.clear()
         for group in groups:
             item = QtWidgets.QTreeWidgetItem(self.groups_tree_widget)

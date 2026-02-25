@@ -5,6 +5,7 @@
 ### Changed
 
 - Update best starting word to "SLATE"
+- Move functions for displaying groups in Wordle UI to `ui.helpers`
 
 ### Fixed
 

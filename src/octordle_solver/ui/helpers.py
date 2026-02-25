@@ -2,9 +2,10 @@
 
 from enum import Enum
 
-from PySide6 import QtWidgets
+from PySide6 import QtWidgets, QtCore
 from PySide6.QtCore import Qt
 
+from typing import Union
 from ..solver import PossibilityState
 
 
@@ -97,3 +98,32 @@ class LetterWidget(QtWidgets.QLabel):
         self.set_color(Color.WHITE)
         self.setText("")
         self.letter_is_set = False
+
+
+def get_word_colors(possibility: Union[list[int], str]) -> list[Color]:
+    """Get the colors for a given answer possibility."""
+    colors = []
+    for result in possibility:
+        if result in [2, "N"]:
+            colors.append(Color.GRAY)
+        elif result in [1, "M"]:
+            colors.append(Color.YELLOW)
+        elif result in [0, "Y"]:
+            colors.append(Color.GREEN)
+    return colors
+
+
+def style_text(text: str, colors: list[Color]) -> str:
+    """Style the text with the given colors."""
+    styled_text = ""
+    for letter, color in zip(text, colors):
+        styled_text += f'<span style="color: #{color.value}; font-weight: bold;">{letter}</span>'
+    return styled_text
+
+
+def create_colored_label(text: str, colors: list[Color]) -> QtWidgets.QLabel:
+    """Create a QLabel with colored letters."""
+    label = QtWidgets.QLabel()
+    label.setText(style_text(text, colors))
+    label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+    return label
