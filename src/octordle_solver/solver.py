@@ -162,8 +162,9 @@ class Puzzle:
             result (str): Result of the word being guessed.
         """
         result = self._sanitize_result(result)
-        self.guesses.append(Guess(word, result))
-        self.remaining_words = self.filter_words(self.remaining_words, word, result)
+        guess = Guess(word, result)
+        self.guesses.append(guess)
+        self.filter_words(guess)
         if self._get_best_answer:
             self.get_all_answers()
 
@@ -205,18 +206,16 @@ class Puzzle:
         self.all_answers_dict = {}
         self.guesses = []
 
-    def filter_words(self, words: list[str], guess: str, result: str) -> list:
-        """Filter words based on a guess and its result.
+    def filter_words(self, guess: Guess) -> None:
+        """Filter the remaining words based on a guess.
 
         Args:
-            words (list[str]): List of words to filter
-            guess (str): The guess that was made
-            result (str): The result of the guess (e.g. "YNMYN")
+            guess (Guess): The guess that was made
 
         Result:
             list[str]: Filtered words
         """
-        return [word for word in words if score_guess(guess, word) == result]
+        self.remaining_words = [word for word in self.remaining_words if score_guess(guess.word, word) == guess.result]
 
 
 def get_cached_best_second_guess(answer_possibility: list[int]) -> Optional[str]:

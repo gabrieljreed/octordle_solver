@@ -3,6 +3,7 @@ import pytest
 from octordle_solver.solver import (
     AnswerPossibility,
     Group,
+    Guess,
     Puzzle,
     calculate_fitness_score,
     create_chunks,
@@ -239,7 +240,10 @@ class TestPuzzle:
         ],
     )
     def test_filter_words(self, words, guess, result, expected):
-        assert sorted(Puzzle().filter_words(words, guess, result)) == sorted(expected)
+        puzzle = Puzzle()
+        puzzle.remaining_words = words
+        puzzle.filter_words(Guess(guess, result))
+        assert sorted(puzzle.remaining_words) == sorted(expected)
 
 
 @pytest.mark.parametrize(
