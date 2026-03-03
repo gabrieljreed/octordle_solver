@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-03-03
+
 ### Changed
 
 - Update best starting word to "SLATE"
@@ -35,7 +37,8 @@
 
 - Initial release!
 
-[Unreleased]: https://github.com/gabrieljreed/octordle_solver/compare/1.2.0...HEAD
+[Unreleased]: https://github.com/gabrieljreed/octordle_solver/compare/1.3.0...HEAD
+[1.3.0]: https://github.com/gabrieljreed/octordle_solver/releases/tag/1.3.0
 [1.2.0]: https://github.com/gabrieljreed/octordle_solver/releases/tag/1.2.0
 [1.1.0]: https://github.com/gabrieljreed/octordle_solver/releases/tag/1.1.0
 [1.0.0]: https://github.com/gabrieljreed/octordle_solver/releases/tag/1.0.0
