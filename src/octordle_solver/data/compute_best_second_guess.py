@@ -40,5 +40,6 @@ if __name__ == "__main__":
     print(f"{num_invalid_states=}")
     end_time = time.time()
     print(f"Ran in {end_time - start_time:02f} seconds")
-    with open(output_file, "w") as f:
+    with open(output_file, "w", newline="\n") as f:
         json.dump(best_second_guesses, f, indent=4)
+        f.write("\n")
