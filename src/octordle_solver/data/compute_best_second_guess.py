@@ -1,5 +1,6 @@
 """Compute the best second guess for all answer possibilities."""
 
+from tqdm import tqdm
 import itertools
 import json
 import time
@@ -20,22 +21,25 @@ if __name__ == "__main__":
 
     start_time = time.time()
 
+    progress_bar = tqdm(total=len(all_possibilities))
     for possibility in all_possibilities:
         puzzle = Puzzle()
         puzzle.make_guess(STARTING_GUESS, list(possibility))
-        print(puzzle.guesses[0])
-        print(f"{len(puzzle.remaining_words)} remaining word(s)")
+        # print(puzzle.guesses[0])
+        # print(f"{len(puzzle.remaining_words)} remaining word(s)")
         if len(puzzle.remaining_words) == 0:
             num_invalid_states += 1
             continue
         if len(puzzle.all_answers) == 0:
-            print(f"No possible words for {possibility}")
+            # print(f"No possible words for {possibility}")
             continue
         possibility_key = ""
         for letter_possibility in possibility:
             possibility_key += str(letter_possibility)
         best_second_guesses[possibility_key] = puzzle.all_answers[0].word
-        print(f"Best guess: {puzzle.all_answers[0].word}")
+        progress_bar.update()
+        progress_bar.set_postfix({"status": puzzle.all_answers[0].word})
+        # print(f"Best guess: {puzzle.all_answers[0].word}")
 
     print(f"{num_invalid_states=}")
     end_time = time.time()
