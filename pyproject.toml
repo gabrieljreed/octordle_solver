@@ -25,3 +25,4 @@ profile = "black"
 [project.scripts]
 wordle-solver-ui = "octordle_solver.ui.launch_ui:wordle"
 octordle-solver-ui = "octordle_solver.ui.launch_ui:octordle"
+compute-best-second-guess = "octordle_solver.data.compute_best_second_guess:main"
