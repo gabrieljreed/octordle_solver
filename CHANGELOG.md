@@ -6,6 +6,8 @@
 
 - Update best starting word to "SLATE"
 - Move functions for displaying groups in Wordle UI to `ui.helpers`
+- Improve printout when computing best second guess
+- Add project script for computing best second guess
 
 ### Fixed
 
