@@ -3,6 +3,7 @@
 from functools import partial
 from typing import Iterable, Optional
 
+import darkdetect
 import pyperclip
 from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt
@@ -16,6 +17,40 @@ from ..solver import (
 from ..utils import sanitize_words
 from .helpers import Color, LetterWidget, get_word_colors, create_colored_label
 from .threads import ThreadWorker
+
+WORDLE_SOLVER_DARK_STYLE_SHEET = """
+QMainWindow, QWidget {
+    background-color: #1f1f1f;
+    color: #f2f2f2;
+}
+
+QListWidget, QTreeWidget, QTextEdit {
+    background-color: #2b2b2b;
+    color: #f2f2f2;
+}
+
+QPushButton, QMenuBar, QMenu {
+    background-color: #2b2b2b;
+    color: #f2f2f2;
+}
+"""
+
+WORDLE_SOLVER_LIGHT_STYLE_SHEET = """
+QMainWindow, QWidget {
+    background-color: #f5f5f5;
+    color: #111111;
+}
+
+QListWidget, QTreeWidget, QTextEdit {
+    background-color: #ffffff;
+    color: #111111;
+}
+
+QPushButton, QMenuBar, QMenu {
+    background-color: #ffffff;
+    color: #111111;
+}
+"""
 
 
 class HelpDialog(QtWidgets.QDialog):
@@ -143,6 +178,7 @@ class WordleSolver(QtWidgets.QMainWindow):
         self.setCentralWidget(central_widget)
         layout = QtWidgets.QHBoxLayout()
         central_widget.setLayout(layout)
+        self._dark_mode_enabled = bool(darkdetect.isDark())
 
         # Wordle grid
         self.grid_layout = QtWidgets.QGridLayout()
@@ -214,6 +250,12 @@ class WordleSolver(QtWidgets.QMainWindow):
         self.debug_action.triggered.connect(self.debug)
         file_menu.addAction(self.debug_action)
 
+        self.dark_mode_action = QtGui.QAction("Dark Mode", self)
+        self.dark_mode_action.setCheckable(True)
+        self.dark_mode_action.setChecked(self._dark_mode_enabled)
+        self.dark_mode_action.triggered.connect(self.toggle_dark_mode)
+        file_menu.addAction(self.dark_mode_action)
+
         # Setup variables
         self._current_row = 0
         self._current_col = 0
@@ -223,6 +265,7 @@ class WordleSolver(QtWidgets.QMainWindow):
 
         self.threadpool = QtCore.QThreadPool()
         self.original_style_sheet = self.styleSheet()
+        self._apply_dark_mode(self._dark_mode_enabled)
 
         self.setFocus()
 
@@ -263,10 +306,23 @@ class WordleSolver(QtWidgets.QMainWindow):
         for row in range(6):
             row_boxes = []
             for col in range(5):
-                label = LetterWidget()
+                label = LetterWidget(is_dark_mode=self._dark_mode_enabled)
                 self.grid_layout.addWidget(label, row, col)
                 row_boxes.append(label)
             self.letter_boxes.append(row_boxes)
+
+    def _apply_dark_mode(self, enabled: bool) -> None:
+        """Apply dark mode style to the window and letter widgets."""
+        self._dark_mode_enabled = enabled
+        style_sheet = WORDLE_SOLVER_DARK_STYLE_SHEET if enabled else WORDLE_SOLVER_LIGHT_STYLE_SHEET
+        self.setStyleSheet(style_sheet)
+        for row in self.letter_boxes:
+            for box in row:
+                box.set_dark_mode(enabled)
+
+    def toggle_dark_mode(self, enabled: bool) -> None:
+        """Handle dark mode menu toggling."""
+        self._apply_dark_mode(enabled)
 
     def keyPressEvent(self, event):
         """Handle key press events."""

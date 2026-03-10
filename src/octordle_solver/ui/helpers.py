@@ -1,12 +1,20 @@
 """Helper UI classes and functions."""
 
 from enum import Enum
+import darkdetect
 
 from PySide6 import QtWidgets, QtCore
 from PySide6.QtCore import Qt
 
 from typing import Union
 from ..solver import PossibilityState
+
+LIGHT_TILE_BORDER_COLOR = "#D3D6DA"
+DARK_TILE_BORDER_COLOR = "#565758"
+DARK_TILE_WHITE_BACKGROUND_COLOR = "#191a1c"
+LIGHT_TILE_WHITE_TEXT_COLOR = "black"
+DARK_TILE_WHITE_TEXT_COLOR = "white"
+DEFAULT_TILE_TEXT_COLOR = "white"
 
 
 class Color(Enum):
@@ -21,28 +29,37 @@ class Color(Enum):
 class LetterWidget(QtWidgets.QLabel):
     """Custom label to hold a letter."""
 
-    def __init__(self, parent=None, dimensions=None):
+    def __init__(self, parent=None, dimensions=None, is_dark_mode=None):
         """Initialize the widget."""
         super().__init__(parent)
         if not dimensions:
             dimensions = [60, 60]
         self.setFixedSize(*dimensions)
-        # TODO: Fix this for dark mode and detect when to use it
-        self.setStyleSheet(
-            """
-            QLabel {
-                border: 2px solid #D3D6DA;
-                font-size: 24px;
-                font-weight: bold;
-                text-align: center;
-                background-color: white;
-            }
-        """
-        )
+        self._is_dark_mode = bool(darkdetect.isDark()) if is_dark_mode is None else bool(is_dark_mode)
         self.setAlignment(Qt.AlignCenter)
 
         self.letter_is_set = False
         self.current_color = Color.WHITE
+        self.set_color(Color.WHITE)
+
+    def _get_stylesheet(self, color: Color, text_color: str) -> str:
+        """Build the label stylesheet based on the color and current theme."""
+        border_color = LIGHT_TILE_BORDER_COLOR
+        background_color = f"#{color.value}"
+        if self._is_dark_mode and color == Color.WHITE:
+            border_color = DARK_TILE_BORDER_COLOR
+            background_color = DARK_TILE_WHITE_BACKGROUND_COLOR
+
+        return f"""
+            QLabel {{
+                border: 2px solid {border_color};
+                color: {text_color};
+                font-size: 24px;
+                font-weight: bold;
+                text-align: center;
+                background-color: {background_color};
+            }}
+        """
 
     def mousePressEvent(self, event):
         """Handle the mouse press event."""
@@ -66,21 +83,15 @@ class LetterWidget(QtWidgets.QLabel):
             color (Color): The color to set.
         """
         self.current_color = color
-        text_color = "white"
+        text_color = DEFAULT_TILE_TEXT_COLOR
         if color == Color.WHITE:
-            text_color = "black"
-        self.setStyleSheet(
-            f"""
-            QLabel {{
-                border: 2px solid #D3D6DA;
-                color: {text_color};
-                font-size: 24px;
-                font-weight: bold;
-                text-align: center;
-                background-color: #{self.current_color.value};
-            }}
-        """
-        )
+            text_color = DARK_TILE_WHITE_TEXT_COLOR if self._is_dark_mode else LIGHT_TILE_WHITE_TEXT_COLOR
+        self.setStyleSheet(self._get_stylesheet(color, text_color))
+
+    def set_dark_mode(self, is_dark_mode: bool) -> None:
+        """Set dark mode state and refresh current tile styling."""
+        self._is_dark_mode = is_dark_mode
+        self.set_color(self.current_color)
 
     @property
     def state(self) -> PossibilityState:

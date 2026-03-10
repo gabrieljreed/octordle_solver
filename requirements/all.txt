@@ -2,3 +2,4 @@ colorama
 pyperclip
 PySide6
 tqdm
+darkdetect
