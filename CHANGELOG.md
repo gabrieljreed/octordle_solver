@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Add dark mode toggle
+
 ## [1.3.0] - 2026-03-03
 
 ### Changed
