@@ -29,13 +29,13 @@ class Color(Enum):
 class LetterWidget(QtWidgets.QLabel):
     """Custom label to hold a letter."""
 
-    def __init__(self, parent=None, dimensions=None):
+    def __init__(self, parent=None, dimensions=None, is_dark_mode=None):
         """Initialize the widget."""
         super().__init__(parent)
         if not dimensions:
             dimensions = [60, 60]
         self.setFixedSize(*dimensions)
-        self._is_dark_mode = bool(darkdetect.isDark())
+        self._is_dark_mode = bool(darkdetect.isDark()) if is_dark_mode is None else bool(is_dark_mode)
         self.setAlignment(Qt.AlignCenter)
 
         self.letter_is_set = False
@@ -87,6 +87,11 @@ class LetterWidget(QtWidgets.QLabel):
         if color == Color.WHITE:
             text_color = DARK_TILE_WHITE_TEXT_COLOR if self._is_dark_mode else LIGHT_TILE_WHITE_TEXT_COLOR
         self.setStyleSheet(self._get_stylesheet(color, text_color))
+
+    def set_dark_mode(self, is_dark_mode: bool) -> None:
+        """Set dark mode state and refresh current tile styling."""
+        self._is_dark_mode = is_dark_mode
+        self.set_color(self.current_color)
 
     @property
     def state(self) -> PossibilityState:

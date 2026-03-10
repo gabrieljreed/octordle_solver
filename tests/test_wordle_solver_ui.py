@@ -1,5 +1,12 @@
-from octordle_solver.ui.wordle_solver_ui import CompareToWordleBotDialog, DiffDialog, HelpDialog, WordleSolver
-from octordle_solver.ui.helpers import Color
+from octordle_solver.ui.wordle_solver_ui import (
+    CompareToWordleBotDialog,
+    DiffDialog,
+    HelpDialog,
+    WordleSolver,
+    WORDLE_SOLVER_DARK_STYLE_SHEET,
+    WORDLE_SOLVER_LIGHT_STYLE_SHEET,
+)
+from octordle_solver.ui.helpers import Color, DARK_TILE_BORDER_COLOR, LIGHT_TILE_BORDER_COLOR
 from octordle_solver.solver import get_cached_best_second_guess, AnswerPossibility, Group
 from octordle_solver.constants import STARTING_GUESS
 from octordle_solver.ui.helpers import get_word_colors, style_text
@@ -31,6 +38,35 @@ class TestWordleSolverUI:
             assert len(row) == 5
         assert widget._current_row == 0
         assert widget._current_col == 0
+
+    def test_init_uses_solver_dark_mode_for_letter_widgets(self, qtbot, mocker):
+        mocker.patch("octordle_solver.ui.wordle_solver_ui.darkdetect.isDark", return_value=True)
+
+        widget = WordleSolver()
+        qtbot.addWidget(widget)
+
+        assert widget._dark_mode_enabled is True
+        assert widget.dark_mode_action.isChecked() is True
+        assert widget.letter_boxes[0][0]._is_dark_mode is True
+
+    def test_dark_mode_menu_toggle_updates_letter_widget_style(self, qtbot):
+        widget = WordleSolver()
+        qtbot.addWidget(widget)
+
+        assert widget.dark_mode_action.isCheckable()
+
+        first_box = widget.letter_boxes[0][0]
+        widget.toggle_dark_mode(True)
+        dark_style = first_box.styleSheet()
+        assert "background-color: #191a1c;" in dark_style
+        assert f"border: 2px solid {DARK_TILE_BORDER_COLOR};" in dark_style
+        assert widget.styleSheet() == WORDLE_SOLVER_DARK_STYLE_SHEET
+
+        widget.toggle_dark_mode(False)
+        light_style = first_box.styleSheet()
+        assert "background-color: #ffffff;" in light_style
+        assert f"border: 2px solid {LIGHT_TILE_BORDER_COLOR};" in light_style
+        assert widget.styleSheet() == WORDLE_SOLVER_LIGHT_STYLE_SHEET
 
     def test_type_letter(self, qtbot):
         widget = WordleSolver()
