@@ -2,7 +2,15 @@ import pytest
 from PySide6 import QtCore, QtTest
 
 from octordle_solver.solver import PossibilityState
-from octordle_solver.ui.helpers import Color, LetterWidget
+from octordle_solver.ui.helpers import (
+    Color,
+    LetterWidget,
+    LIGHT_TILE_BORDER_COLOR,
+    DARK_TILE_BORDER_COLOR,
+    DARK_TILE_WHITE_BACKGROUND_COLOR,
+    LIGHT_TILE_WHITE_TEXT_COLOR,
+    DARK_TILE_WHITE_TEXT_COLOR,
+)
 
 
 class TestLetterWidget:
@@ -13,6 +21,28 @@ class TestLetterWidget:
         assert widget.current_color == Color.WHITE
         assert widget.text() == ""
         assert not widget.letter_is_set
+
+    def test_init_light_mode_uses_light_white_tile_style(self, qtbot, mocker):
+        mocker.patch("octordle_solver.ui.helpers.darkdetect.isDark", return_value=False)
+
+        widget = LetterWidget()
+        qtbot.addWidget(widget)
+
+        style = widget.styleSheet()
+        assert f"border: 2px solid {LIGHT_TILE_BORDER_COLOR};" in style
+        assert f"background-color: #{Color.WHITE.value};" in style
+        assert f"color: {LIGHT_TILE_WHITE_TEXT_COLOR};" in style
+
+    def test_init_dark_mode_uses_dark_white_tile_style(self, qtbot, mocker):
+        mocker.patch("octordle_solver.ui.helpers.darkdetect.isDark", return_value=True)
+
+        widget = LetterWidget()
+        qtbot.addWidget(widget)
+
+        style = widget.styleSheet()
+        assert f"border: 2px solid {DARK_TILE_BORDER_COLOR};" in style
+        assert f"background-color: {DARK_TILE_WHITE_BACKGROUND_COLOR};" in style
+        assert f"color: {DARK_TILE_WHITE_TEXT_COLOR};" in style
 
     def test_mouse_press(self, qtbot, mocker):
         widget = LetterWidget()
