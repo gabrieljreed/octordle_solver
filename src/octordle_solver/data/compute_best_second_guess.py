@@ -39,16 +39,16 @@ def compute_best_second_guesses(
         puzzle.make_guess(starting_guess, list(possibility))
         guess_display = str(puzzle.guesses[0])
         remaining_words_count = len(puzzle.remaining_words)
-        remaining_words_str = f"{remaining_words_count} remaining word(s)"
+        remaining_words_str = f"{remaining_words_count:03d} remaining word(s)"
 
         if remaining_words_count == 0:
             num_invalid_states += 1
-            status_message = f"guess={guess_display} | {remaining_words_str} | invalid state"
+            status_message = f"guess={guess_display} | {remaining_words_str} | Best guess: -----"
             status_callback(status_message)
             continue
 
         if len(puzzle.all_answers) == 0:
-            status_message = f"guess={guess_display} | {remaining_words_str} | no possible words"
+            status_message = f"guess={guess_display} | {remaining_words_str} | Best guess: -----"
             status_callback(status_message)
             continue
 
