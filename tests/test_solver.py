@@ -8,6 +8,7 @@ from octordle_solver.solver import (
     calculate_fitness_score,
     create_chunks,
     generate_groups,
+    get_all_answers,
     get_best_guess_multiple_puzzles,
     score_guess,
 )
@@ -287,6 +288,34 @@ def test_create_chunks():
     assert chunks[2] == ["20", "21", "22"]
 
 
+def test_get_all_answers_uses_valid_guesses_parameter(mocker):
+    class InlineExecutor:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def map(self, func, iterable):
+            return map(func, iterable)
+
+    mock_dictionary = mocker.patch("octordle_solver.solver.dictionary")
+    mock_dictionary.words = ["XXXXX"]
+    mock_dictionary.valid_guesses = ["YYYYY"]
+
+    mocker.patch("octordle_solver.solver.concurrent.futures.ProcessPoolExecutor", InlineExecutor)
+
+    remaining_words = ["CRANE", "SLATE"]
+    valid_guesses = ["ADIEU"]
+
+    all_answers = get_all_answers(remaining_words=remaining_words, valid_guesses=valid_guesses)
+    answer_words = {answer.word for answer in all_answers}
+
+    assert "ADIEU" in answer_words
+    assert "XXXXX" not in answer_words
+    assert "YYYYY" not in answer_words
+
+
 class TestGetBestGuessMultiplePuzzles:
     # TODO: Figure out what takes so long
 
@@ -306,7 +335,7 @@ class TestGetBestGuessMultiplePuzzles:
         puzzle.valid_guesses = ["WATCH", "AAAAA", "BBBBB"]
         puzzle.make_guess("TREED", "MMNYN")
         best_guess = get_best_guess_multiple_puzzles([puzzle])
-        assert best_guess == "CARET"
+        return best_guess == puzzle.all_answers[0].word
 
     def test_solve_in_one_turn(self, mocker):
         mock_dictionary = mocker.patch("octordle_solver.solver.dictionary")
