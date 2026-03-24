@@ -178,6 +178,14 @@ class TestPuzzle:
             "ANNEX",
         ]
 
+    def test_make_guess_no_get_best_answer(self):
+        puzzle = Puzzle(get_best_answer=False)
+        puzzle.make_guess("CRANE", "NNYYY")
+        # All answers should still be blank, but everything else should work as normal (e.g. filtering remaining words)
+        assert puzzle.all_answers == []
+        assert puzzle.all_answers_dict == {}
+        assert puzzle.remaining_words != []
+
     def test_is_solved(self, mocker):
         puzzle = Puzzle()
 
@@ -244,6 +252,17 @@ class TestPuzzle:
         puzzle.remaining_words = words
         puzzle.filter_words(Guess(guess, result))
         assert sorted(puzzle.remaining_words) == sorted(expected)
+
+    @pytest.mark.parametrize(
+        "result, expected_output",
+        [
+            ["YYYYY", "YYYYY"],
+            [[0, 1, 2, 0, 1], "YMNYM"],
+        ],
+    )
+    def test_sanitize_result(self, result, expected_output):
+        puzzle = Puzzle()
+        assert puzzle._sanitize_result(result) == expected_output
 
 
 @pytest.mark.parametrize(
