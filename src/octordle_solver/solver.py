@@ -387,20 +387,16 @@ def get_all_answers(remaining_words: list[str], valid_guesses: Optional[list[str
     Returns:
         (list[AnswerPossibility]): List of AnswerPossibility objects.
     """
-    if not valid_guesses:
-        valid_guesses = dictionary.valid_guesses
-
     all_possibilities: list[AnswerPossibility] = []
-
     if len(remaining_words) == 1:
         word = remaining_words[0]
         groups = generate_groups_cached(word, tuple(remaining_words))
         all_possibilities = [AnswerPossibility(word, groups)]
+        return all_possibilities
 
-    words = remaining_words + dictionary.words
-
-    batches = list(create_chunks(words, CHUNK_SIZE))
-
+    valid_guesses = valid_guesses or dictionary.valid_guesses
+    guesses = list(dict.fromkeys(remaining_words + valid_guesses))
+    batches = list(create_chunks(guesses, CHUNK_SIZE))
     with concurrent.futures.ProcessPoolExecutor() as executor:
         batch_args = [(batch, remaining_words) for batch in batches]
         for batch_result in executor.map(process_word_batch, batch_args):
