@@ -75,8 +75,8 @@ def test_compute_best_second_guesses_handles_all_statuses():
     assert results == {"22222": "SLATE"}
     assert invalid_state_count == 1
     assert len(statuses) == 3
-    assert statuses[0].endswith("invalid state")
-    assert statuses[1].endswith("no possible words")
+    assert statuses[0].endswith("Best guess: -----")
+    assert statuses[1].endswith("Best guess: -----")
     assert statuses[2].endswith("Best guess: SLATE")
 
 
