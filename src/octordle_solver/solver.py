@@ -7,6 +7,7 @@ from collections import Counter, defaultdict
 from enum import Enum
 from functools import cached_property, lru_cache
 from pathlib import Path
+from collections.abc import Sequence
 from typing import Optional, Union
 from dataclasses import dataclass
 
@@ -14,7 +15,7 @@ from colorama import Fore
 
 from .dictionary import dictionary
 
-CHUNK_SIZE = 10
+CHUNK_SIZE = 400
 PENALTY_WEIGHT = 0.1
 REMAINING_WORD_BONUS = 2
 SECOND_GUESS_PATH = Path(__file__).parent / "data" / "best_second_guesses.json"
@@ -97,17 +98,19 @@ class AnswerPossibility:
         if len(self.groups) == len(other.groups):
             if len(self.groups) == 0:
                 return True
-            return max(len(group.words) for group in self.groups) < max(len(group.words) for group in other.groups)
+            return self.max_group_size < other.max_group_size
 
         return len(self.groups) > len(other.groups)
 
 
-def calculate_fitness_score(answer_possibility: AnswerPossibility, remaining_words: list[str]) -> float:
+def calculate_fitness_score(
+    answer_possibility: AnswerPossibility, remaining_words: Union[list[str], set[str]]
+) -> float:
     """Return a fitness score for the given answer possibility and list of remaining words.
 
     Args:
         answer_possibility (AnswerPossibility): The AnswerPossibility to generate a fitness score for.
-        remaining_words (list[str]): List of remaining words in the puzzle.
+        remaining_words (Union[list[str], set[str]]): Remaining words in the puzzle.
 
     Returns:
         (float): Computed score.
@@ -320,20 +323,20 @@ def score_guess_cached(guess: str, answer: str) -> str:
     return score_guess(guess, answer)
 
 
-def generate_groups(given_word: str, remaining_words: list[str]):
+def generate_groups(given_word: str, remaining_words: Sequence[str]):
     """Generate groups.
 
     Args:
         given_word (str): The word to generate groups for.
-        remaining_words (list[str]): The words that are still valid answers.
+        remaining_words (Sequence[str]): The words that are still valid answers.
 
     Returns:
         (list[Group]): List of groups generated.
     """
-    groups: dict[tuple[str, ...], list[str]] = defaultdict(list)
+    groups: dict[str, list[str]] = defaultdict(list)
 
     for word in remaining_words:
-        feedback = tuple(score_guess_cached(given_word, word))
+        feedback = score_guess_cached(given_word, word)
         groups[feedback].append(word)
 
     return [Group(words, possibility) for possibility, words in groups.items()]
@@ -350,8 +353,7 @@ def generate_groups_cached(given_word, remaining_words_tuple):
     Returns:
         (list[Group]): List of groups generated.
     """
-    remaining_words = list(remaining_words_tuple)
-    return generate_groups(given_word, remaining_words)
+    return generate_groups(given_word, remaining_words_tuple)
 
 
 def create_chunks(list_to_chunk: list, chunk_size: int):
@@ -360,19 +362,27 @@ def create_chunks(list_to_chunk: list, chunk_size: int):
         yield list_to_chunk[i : i + chunk_size]
 
 
-def process_word_batch(args) -> list[tuple[str, list[Group]]]:
+_worker_remaining_words: Optional[tuple[str, ...]] = None
+
+
+def _init_worker(remaining_words: tuple[str, ...]) -> None:
+    """Initialise a worker process with the shared remaining-words tuple."""
+    global _worker_remaining_words
+    _worker_remaining_words = remaining_words
+
+
+def process_word_batch(words_batch: list[str]) -> list[tuple[str, list[Group]]]:
     """Generate groups for a given batch of words.
 
     Args:
-        args (tuple): A tuple of the batch of words and the remaining words.
+        words_batch (list[str]): Batch of candidate words to evaluate.
 
     Returns:
         list[tuple[str, list[Group]]]: List of results - tuples of the word and list of groups.
     """
-    words_batch, remaining_words = args
     batch_results = []
     for word in words_batch:
-        groups = generate_groups_cached(word, tuple(remaining_words))
+        groups = generate_groups_cached(word, _worker_remaining_words)
         batch_results.append((word, groups))
     return batch_results
 
@@ -397,9 +407,11 @@ def get_all_answers(remaining_words: list[str], valid_guesses: Optional[list[str
     valid_guesses = valid_guesses or dictionary.valid_guesses
     guesses = list(dict.fromkeys(remaining_words + valid_guesses))
     batches = list(create_chunks(guesses, CHUNK_SIZE))
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        batch_args = [(batch, remaining_words) for batch in batches]
-        for batch_result in executor.map(process_word_batch, batch_args):
+    remaining_words_tuple = tuple(remaining_words)
+    with concurrent.futures.ProcessPoolExecutor(
+        initializer=_init_worker, initargs=(remaining_words_tuple,)
+    ) as executor:
+        for batch_result in executor.map(process_word_batch, batches):
             for word, groups in batch_result:
                 all_possibilities.append(AnswerPossibility(word, groups))
 
@@ -439,13 +451,14 @@ def get_best_guess_multiple_puzzles(puzzles: list[Puzzle]) -> str:
     weights = {
         puzzle: (total_remaining_words - len(puzzle.remaining_words)) / total_remaining_words for puzzle in puzzles
     }
+    remaining_word_sets = {puzzle: set(puzzle.remaining_words) for puzzle in puzzles}
     for word in all_words:
         total_score = 0.0
         for puzzle in puzzles:
             answer_possibility = puzzle.all_answers_dict.get(word)
             if not answer_possibility:
                 continue
-            fitness_score = calculate_fitness_score(answer_possibility, puzzle.remaining_words)
+            fitness_score = calculate_fitness_score(answer_possibility, remaining_word_sets[puzzle])
             weight = weights[puzzle]
             total_score += fitness_score * weight
 

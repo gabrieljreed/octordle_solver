@@ -288,9 +288,9 @@ def test_score_guess(guess, answer, expected):
             "ABCDE",
             ["ABCDE", "ABCED", "EDCBA"],
             [
-                Group(["ABCDE"], ("Y", "Y", "Y", "Y", "Y")),
-                Group(["ABCED"], ("Y", "Y", "Y", "M", "M")),
-                Group(["EDCBA"], ("M", "M", "Y", "M", "M")),
+                Group(["ABCDE"], "YYYYY"),
+                Group(["ABCED"], "YYYMM"),
+                Group(["EDCBA"], "MMYMM"),
             ],
         ],
     ],
@@ -309,6 +309,10 @@ def test_create_chunks():
 
 def test_get_all_answers_uses_valid_guesses_parameter(mocker):
     class InlineExecutor:
+        def __init__(self, initializer=None, initargs=()):
+            if initializer is not None:
+                initializer(*initargs)
+
         def __enter__(self):
             return self
 
