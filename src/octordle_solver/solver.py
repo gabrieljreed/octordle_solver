@@ -145,7 +145,7 @@ class Guess:
 class Puzzle:
     """Class to hold the state of a single Wordle puzzle."""
 
-    def __init__(self, get_best_answer: bool = True) -> None:
+    def __init__(self, get_best_answer: bool = True, hard_mode: bool = False) -> None:
         """Initialize the puzzle."""
         self.remaining_words = dictionary.valid_answers.copy()
         self.valid_guesses = dictionary.valid_guesses.copy()
@@ -153,6 +153,7 @@ class Puzzle:
         self.all_answers_dict: dict[str, AnswerPossibility] = {}
         self.guesses: list[Guess] = []
         self._get_best_answer = get_best_answer
+        self.hard_mode = hard_mode
 
     def make_guess(self, word: str, result: Union[str, list[int]]):
         """Guess a word.
@@ -165,6 +166,8 @@ class Puzzle:
         guess = Guess(word, result)
         self.guesses.append(guess)
         self.filter_words(guess)
+        if self.hard_mode:
+            self._filter_valid_guesses_hard_mode()
         if self._get_best_answer:
             self.get_all_answers()
 
@@ -205,6 +208,29 @@ class Puzzle:
         self.all_answers = []
         self.all_answers_dict = {}
         self.guesses = []
+
+    def _filter_valid_guesses_hard_mode(self) -> None:
+        """Filter valid_guesses to only words satisfying hard mode constraints.
+
+        Green letters must appear in the same position; yellow letters must appear somewhere.
+        """
+        correct_positions: dict[int, str] = {}
+        required_letters: set[str] = set()
+
+        for guess in self.guesses:
+            for i, (letter, state) in enumerate(zip(guess.word, guess.result)):
+                if state == "Y":
+                    correct_positions[i] = letter
+                elif state == "M":
+                    required_letters.add(letter)
+
+        def satisfies(word: str) -> bool:
+            for pos, letter in correct_positions.items():
+                if word[pos] != letter:
+                    return False
+            return all(letter in word for letter in required_letters)
+
+        self.valid_guesses = [w for w in self.valid_guesses if satisfies(w)]
 
     def filter_words(self, guess: Guess) -> None:
         """Filter the remaining words based on a guess.

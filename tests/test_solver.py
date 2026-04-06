@@ -265,6 +265,50 @@ class TestPuzzle:
         puzzle = Puzzle()
         assert puzzle._sanitize_result(result) == expected_output
 
+    def test_hard_mode_filters_valid_guesses_on_correct(self):
+        puzzle = Puzzle(get_best_answer=False, hard_mode=True)
+        puzzle.valid_guesses = ["SLATE", "STALE", "SPINE", "CRANE", "ADORE"]
+        puzzle.remaining_words = puzzle.valid_guesses.copy()
+        # S correct at position 0
+        puzzle.make_guess("SLATE", "YNNNN")
+        assert all(w[0] == "S" for w in puzzle.valid_guesses)
+        assert "SLATE" in puzzle.valid_guesses
+        assert "SPINE" in puzzle.valid_guesses
+        assert "CRANE" not in puzzle.valid_guesses
+        assert "ADORE" not in puzzle.valid_guesses
+
+    def test_hard_mode_filters_valid_guesses_on_misplaced(self):
+        puzzle = Puzzle(get_best_answer=False, hard_mode=True)
+        puzzle.valid_guesses = ["CARET", "ADORE", "FRUIT", "CRISP", "TRACE"]
+        puzzle.remaining_words = puzzle.valid_guesses.copy()
+        # A misplaced at position 1 (from "CARET" guess, C=N, A=M, R=N, E=N, T=N)
+        puzzle.make_guess("CARET", "NMNNN")
+        assert all("A" in w for w in puzzle.valid_guesses)
+        assert "FRUIT" not in puzzle.valid_guesses  # no A
+        assert "CRISP" not in puzzle.valid_guesses  # no A
+        assert "ADORE" in puzzle.valid_guesses  # has A
+
+    def test_hard_mode_accumulates_constraints(self):
+        puzzle = Puzzle(get_best_answer=False, hard_mode=True)
+        puzzle.valid_guesses = ["STALE", "SPINE", "SHADE", "CRANE", "ADORE"]
+        puzzle.remaining_words = puzzle.valid_guesses.copy()
+        # S correct at position 0
+        puzzle.make_guess("SLATE", "YNNNN")
+        assert all(w[0] == "S" for w in puzzle.valid_guesses)
+        # Now also require A in the word
+        puzzle.make_guess("SPINE", "YMNNN")
+        assert all(w[0] == "S" and "P" in w for w in puzzle.valid_guesses)
+
+    def test_hard_mode_does_not_filter_in_normal_mode(self):
+        puzzle = Puzzle(get_best_answer=False, hard_mode=False)
+        original_guesses = ["SLATE", "CRANE", "ADORE", "TRYST"]
+        puzzle.valid_guesses = original_guesses.copy()
+        puzzle.remaining_words = puzzle.valid_guesses.copy()
+        puzzle.make_guess("SLATE", "YNNNN")
+        # In normal mode, valid_guesses should not be filtered by hard mode constraints
+        assert "CRANE" in puzzle.valid_guesses
+        assert "ADORE" in puzzle.valid_guesses
+
 
 @pytest.mark.parametrize(
     "guess, answer, expected",
