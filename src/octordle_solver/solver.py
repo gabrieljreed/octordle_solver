@@ -189,6 +189,8 @@ class Puzzle:
 
     def get_all_answers(self) -> list[AnswerPossibility]:
         """Get all answers for the given state."""
+        if not self.remaining_words:
+            return []
         self.all_answers = get_all_answers(self.remaining_words, self.valid_guesses)
         self.all_answers_dict = {answer.word: answer for answer in self.all_answers}
         return self.all_answers
