@@ -217,7 +217,9 @@ class Puzzle:
         Result:
             list[str]: Filtered words
         """
-        self.remaining_words = [word for word in self.remaining_words if score_guess(guess.word, word) == guess.result]
+        self.remaining_words = [
+            word for word in self.remaining_words if score_guess_cached(guess.word, word) == guess.result
+        ]
 
 
 def get_cached_best_second_guess(answer_possibility: list[int]) -> Optional[str]:
