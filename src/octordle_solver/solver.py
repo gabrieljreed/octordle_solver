@@ -14,7 +14,7 @@ from colorama import Fore
 
 from .dictionary import dictionary
 
-CHUNK_SIZE = 10
+CHUNK_SIZE = 400
 PENALTY_WEIGHT = 0.1
 REMAINING_WORD_BONUS = 2
 SECOND_GUESS_PATH = Path(__file__).parent / "data" / "best_second_guesses.json"
