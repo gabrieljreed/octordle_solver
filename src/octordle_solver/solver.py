@@ -7,7 +7,7 @@ from collections import Counter, defaultdict
 from enum import Enum
 from functools import cached_property, lru_cache
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, Sequence
 from dataclasses import dataclass
 
 from colorama import Fore
@@ -324,22 +324,20 @@ def score_guess_cached(guess: str, answer: str) -> str:
     return score_guess(guess, answer)
 
 
-def generate_groups(given_word: str, remaining_words: list[str]):
+def generate_groups(given_word: str, remaining_words: Sequence[str]):
     """Generate groups.
 
     Args:
         given_word (str): The word to generate groups for.
-        remaining_words (list[str]): The words that are still valid answers.
+        remaining_words (Sequence[str]): The words that are still valid answers.
 
     Returns:
         (list[Group]): List of groups generated.
     """
-    groups: dict[tuple[str, ...], list[str]] = defaultdict(list)
-
+    groups: dict[str, list[str]] = defaultdict(list)
     for word in remaining_words:
-        feedback = tuple(score_guess_cached(given_word, word))
+        feedback = score_guess_cached(given_word, word)
         groups[feedback].append(word)
-
     return [Group(words, possibility) for possibility, words in groups.items()]
 
 
@@ -354,8 +352,7 @@ def generate_groups_cached(given_word, remaining_words_tuple):
     Returns:
         (list[Group]): List of groups generated.
     """
-    remaining_words = list(remaining_words_tuple)
-    return generate_groups(given_word, remaining_words)
+    return generate_groups(given_word, remaining_words_tuple)
 
 
 def create_chunks(list_to_chunk: list, chunk_size: int):

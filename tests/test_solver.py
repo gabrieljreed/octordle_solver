@@ -288,9 +288,9 @@ def test_score_guess(guess, answer, expected):
             "ABCDE",
             ["ABCDE", "ABCED", "EDCBA"],
             [
-                Group(["ABCDE"], ("Y", "Y", "Y", "Y", "Y")),
-                Group(["ABCED"], ("Y", "Y", "Y", "M", "M")),
-                Group(["EDCBA"], ("M", "M", "Y", "M", "M")),
+                Group(["ABCDE"], "YYYYY"),
+                Group(["ABCED"], "YYYMM"),
+                Group(["EDCBA"], "MMYMM"),
             ],
         ],
     ],
