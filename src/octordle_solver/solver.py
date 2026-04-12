@@ -3,6 +3,7 @@
 from colorama import Back, Style
 import concurrent.futures
 import json
+import os
 from collections import Counter, defaultdict
 from enum import Enum
 from functools import cached_property, lru_cache
@@ -14,7 +15,7 @@ from colorama import Fore
 
 from .dictionary import dictionary
 
-CHUNK_SIZE = 400
+CHUNK_TUNING_FACTOR = 0.5
 PENALTY_WEIGHT = 0.1
 REMAINING_WORD_BONUS = 2
 SECOND_GUESS_PATH = Path(__file__).parent / "data" / "best_second_guesses.json"
@@ -355,6 +356,11 @@ def generate_groups_cached(given_word, remaining_words_tuple):
     return generate_groups(given_word, remaining_words_tuple)
 
 
+def get_chunk_size(num_words, num_workers) -> int:
+    """Dynamically get chunk size based on number of words and available workers."""
+    return max(1, int(num_words // (num_workers * CHUNK_TUNING_FACTOR)))
+
+
 def create_chunks(list_to_chunk: list, chunk_size: int):
     """Create chunks from a given list."""
     for i in range(0, len(list_to_chunk), chunk_size):
@@ -397,7 +403,8 @@ def get_all_answers(remaining_words: list[str], valid_guesses: Optional[list[str
 
     valid_guesses = valid_guesses or dictionary.valid_guesses
     guesses = list(dict.fromkeys(remaining_words + valid_guesses))
-    batches = list(create_chunks(guesses, CHUNK_SIZE))
+    chunk_size = get_chunk_size(len(guesses), os.cpu_count())
+    batches = list(create_chunks(guesses, chunk_size))
     with concurrent.futures.ProcessPoolExecutor() as executor:
         batch_args = [(batch, remaining_words) for batch in batches]
         for batch_result in executor.map(process_word_batch, batch_args):
