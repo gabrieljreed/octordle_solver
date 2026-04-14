@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-04-14
+
 ### Changed
 
 - Update `compute_best_second_guesses` to have more consistent printout
@@ -52,7 +54,8 @@
 
 - Initial release!
 
-[Unreleased]: https://github.com/gabrieljreed/octordle_solver/compare/1.4.0...HEAD
+[Unreleased]: https://github.com/gabrieljreed/octordle_solver/compare/1.5.0...HEAD
+[1.5.0]: https://github.com/gabrieljreed/octordle_solver/releases/tag/1.5.0
 [1.4.0]: https://github.com/gabrieljreed/octordle_solver/releases/tag/1.4.0
 [1.3.0]: https://github.com/gabrieljreed/octordle_solver/releases/tag/1.3.0
 [1.2.0]: https://github.com/gabrieljreed/octordle_solver/releases/tag/1.2.0
