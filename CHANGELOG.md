@@ -5,6 +5,11 @@
 ### Changed
 
 - Update `compute_best_second_guesses` to have more consistent printout
+- Performance enhancements
+    - Instead of letting the solver run on an empty list, exit early if there are no more remaining words
+    - Use the cached function to score guesses within `Puzzle` (this is one I just forgot to do)
+    - Get chunk size dynamically based on number of words and number of cores
+    - Use cached max_group_size when comparing `AnswerPossibility` groups
 
 ## [1.4.0] - 2026-03-10
 

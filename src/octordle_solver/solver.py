@@ -3,18 +3,19 @@
 from colorama import Back, Style
 import concurrent.futures
 import json
+import os
 from collections import Counter, defaultdict
 from enum import Enum
 from functools import cached_property, lru_cache
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, Sequence
 from dataclasses import dataclass
 
 from colorama import Fore
 
 from .dictionary import dictionary
 
-CHUNK_SIZE = 10
+CHUNK_TUNING_FACTOR = 0.5
 PENALTY_WEIGHT = 0.1
 REMAINING_WORD_BONUS = 2
 SECOND_GUESS_PATH = Path(__file__).parent / "data" / "best_second_guesses.json"
@@ -97,7 +98,7 @@ class AnswerPossibility:
         if len(self.groups) == len(other.groups):
             if len(self.groups) == 0:
                 return True
-            return max(len(group.words) for group in self.groups) < max(len(group.words) for group in other.groups)
+            return self.max_group_size < other.max_group_size
 
         return len(self.groups) > len(other.groups)
 
@@ -189,6 +190,8 @@ class Puzzle:
 
     def get_all_answers(self) -> list[AnswerPossibility]:
         """Get all answers for the given state."""
+        if not self.remaining_words:
+            return []
         self.all_answers = get_all_answers(self.remaining_words, self.valid_guesses)
         self.all_answers_dict = {answer.word: answer for answer in self.all_answers}
         return self.all_answers
@@ -215,7 +218,9 @@ class Puzzle:
         Result:
             list[str]: Filtered words
         """
-        self.remaining_words = [word for word in self.remaining_words if score_guess(guess.word, word) == guess.result]
+        self.remaining_words = [
+            word for word in self.remaining_words if score_guess_cached(guess.word, word) == guess.result
+        ]
 
 
 def get_cached_best_second_guess(answer_possibility: list[int]) -> Optional[str]:
@@ -320,22 +325,20 @@ def score_guess_cached(guess: str, answer: str) -> str:
     return score_guess(guess, answer)
 
 
-def generate_groups(given_word: str, remaining_words: list[str]):
+def generate_groups(given_word: str, remaining_words: Sequence[str]):
     """Generate groups.
 
     Args:
         given_word (str): The word to generate groups for.
-        remaining_words (list[str]): The words that are still valid answers.
+        remaining_words (Sequence[str]): The words that are still valid answers.
 
     Returns:
         (list[Group]): List of groups generated.
     """
-    groups: dict[tuple[str, ...], list[str]] = defaultdict(list)
-
+    groups: dict[str, list[str]] = defaultdict(list)
     for word in remaining_words:
-        feedback = tuple(score_guess_cached(given_word, word))
+        feedback = score_guess_cached(given_word, word)
         groups[feedback].append(word)
-
     return [Group(words, possibility) for possibility, words in groups.items()]
 
 
@@ -350,8 +353,12 @@ def generate_groups_cached(given_word, remaining_words_tuple):
     Returns:
         (list[Group]): List of groups generated.
     """
-    remaining_words = list(remaining_words_tuple)
-    return generate_groups(given_word, remaining_words)
+    return generate_groups(given_word, remaining_words_tuple)
+
+
+def get_chunk_size(num_words, num_workers) -> int:
+    """Dynamically get chunk size based on number of words and available workers."""
+    return max(1, int(num_words // (num_workers * CHUNK_TUNING_FACTOR)))
 
 
 def create_chunks(list_to_chunk: list, chunk_size: int):
@@ -396,7 +403,8 @@ def get_all_answers(remaining_words: list[str], valid_guesses: Optional[list[str
 
     valid_guesses = valid_guesses or dictionary.valid_guesses
     guesses = list(dict.fromkeys(remaining_words + valid_guesses))
-    batches = list(create_chunks(guesses, CHUNK_SIZE))
+    chunk_size = get_chunk_size(len(guesses), os.cpu_count())
+    batches = list(create_chunks(guesses, chunk_size))
     with concurrent.futures.ProcessPoolExecutor() as executor:
         batch_args = [(batch, remaining_words) for batch in batches]
         for batch_result in executor.map(process_word_batch, batch_args):
