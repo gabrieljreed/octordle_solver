@@ -7,7 +7,19 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt
 
 from ..constants import STARTING_GUESS
-from ..solver import PossibilityState, Puzzle, get_best_guess_multiple_puzzles
+from ..dictionary import dictionary
+from ..solver import PossibilityState
+
+# Prefer Rust bindings for performance, fallback to Python
+try:
+    import octordle_solver_rs as rs
+    Puzzle = rs.Puzzle
+    get_best_guess_multiple_puzzles = rs.get_best_guess_multiple_puzzles
+    _use_rust = True
+except ImportError:
+    from ..solver import Puzzle, get_best_guess_multiple_puzzles
+    _use_rust = False
+
 from .helpers import Color, LetterWidget
 from .threads import ThreadWorker
 
@@ -160,7 +172,14 @@ class OctordleSolver(QtWidgets.QMainWindow):
         self.num_puzzles = 8
         self.num_guesses = 13
 
-        self.puzzles = [Puzzle() for _ in range(self.num_puzzles)]
+        # Initialize puzzles with Rust or Python backend
+        if _use_rust:
+            self.puzzles = [
+                Puzzle(dictionary.valid_answers, dictionary.valid_guesses, get_best_answer=True)
+                for _ in range(self.num_puzzles)
+            ]
+        else:
+            self.puzzles = [Puzzle() for _ in range(self.num_puzzles)]
 
         self.best_guess = STARTING_GUESS
 

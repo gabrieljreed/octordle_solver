@@ -9,12 +9,18 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt
 
 from ..constants import STARTING_GUESS
-from ..solver import (
-    Puzzle,
-    PossibilityState,
-    get_cached_best_second_guess,
-)
+from ..dictionary import dictionary
+from ..solver import PossibilityState, get_cached_best_second_guess
 from ..utils import sanitize_words
+
+# Prefer Rust bindings for performance, fallback to Python
+try:
+    import octordle_solver_rs as rs
+    Puzzle = rs.Puzzle
+    _use_rust = True
+except ImportError:
+    from ..solver import Puzzle
+    _use_rust = False
 from .helpers import Color, LetterWidget, get_word_colors, create_colored_label
 from .threads import ThreadWorker
 
@@ -260,7 +266,11 @@ class WordleSolver(QtWidgets.QMainWindow):
         self._current_row = 0
         self._current_col = 0
 
-        self.puzzle = Puzzle()
+        # Initialize puzzle with Rust or Python backend
+        if _use_rust:
+            self.puzzle = Puzzle(dictionary.valid_answers, dictionary.valid_guesses, get_best_answer=True)
+        else:
+            self.puzzle = Puzzle(get_best_answer=True)
         self.update_remaining_words_widget()
 
         self.threadpool = QtCore.QThreadPool()
