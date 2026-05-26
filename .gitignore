@@ -1,6 +1,33 @@
+# Python virtual environments
 *venv*/
+
+# Python packaging/build artifacts
 **/*.egg-info/*
+dist/
+build/
+
+# Python caches and bytecode
+__pycache__/
 *.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Test and coverage outputs
 .coverage
-scratch_pad.py
+.coverage.*
+htmlcov/
+
+# Rust build artifacts
+**/target/
+
+# OS/editor-local files
+.DS_Store
 .vscode/*
+
+# Local scratch files
+scratch_pad.py
+/1
+crates/octordle_solver_rs/1
