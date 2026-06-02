@@ -7,7 +7,6 @@ import octordle_solver_rs as rs
 from octordle_solver.dictionary import dictionary
 from octordle_solver.solver import (
     AnswerPossibility as PyAnswerPossibility,
-    Group as PyGroup,
     calculate_fitness_score as py_calculate_fitness_score,
     generate_groups as py_generate_groups,
     get_all_answers as py_get_all_answers,
@@ -164,7 +163,7 @@ class TestCalculateFitnessScore:
     def test_remaining_word_bonus_applied(self):
         """A word that is itself in remaining_words should score higher."""
         groups = rs.generate_groups("CRANE", SMALL_WORDS)
-        ap_in = rs.AnswerPossibility("CRANE", groups)   # CRANE is in SMALL_WORDS
+        ap_in = rs.AnswerPossibility("CRANE", groups)  # CRANE is in SMALL_WORDS
         ap_out = rs.AnswerPossibility("ZZZZZ", groups)  # ZZZZZ is not
 
         score_in = rs.calculate_fitness_score(ap_in, SMALL_WORDS)
@@ -195,7 +194,6 @@ class TestGetAllAnswers:
     def test_result_covers_all_guesses(self):
         """Every word in remaining + valid_guesses must appear in the result."""
         remaining = SMALL_WORDS[:4]
-        import itertools
         rs_result = rs.get_all_answers(remaining, dictionary.valid_guesses)
         result_words = {ap.word for ap in rs_result}
 
@@ -214,7 +212,7 @@ class TestGetAllAnswers:
         py_get_all_answers(remaining, dictionary.valid_guesses)
         python_time = time.perf_counter() - t0
 
-        print(f"\n  Rust: {rust_time:.3f}s  Python: {python_time:.3f}s  speedup: {python_time/rust_time:.1f}x")
+        print(f"\n  Rust: {rust_time:.3f}s  Python: {python_time:.3f}s  speedup: {python_time / rust_time:.1f}x")
         assert rust_time < python_time, "Expected Rust to be faster than Python"
 
 
@@ -312,6 +310,7 @@ class TestPuzzle:
     def test_filter_narrows_to_answer(self):
         """Feeding the correct score for each guess should narrow to exactly 1 word."""
         from octordle_solver.solver import score_guess as py_score
+
         target = "CRANE"
         p = self._make_puzzle()
         for guess_word in ["SLATE", "CRIMP", "CRANE"]:
@@ -327,7 +326,6 @@ class TestPuzzle:
             Puzzle as PyPuzzle,
             score_guess as py_score,
         )
-        from octordle_solver.solver import PossibilityState
 
         target = "CRANE"
         guesses_to_make = ["SLATE", "CRIMP"]

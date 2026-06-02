@@ -624,4 +624,3 @@ pub fn get_best_guess_multiple_puzzles(
     }
     Ok(best_word)
 }
-

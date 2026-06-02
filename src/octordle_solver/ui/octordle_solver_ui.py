@@ -13,11 +13,13 @@ from ..solver import PossibilityState
 # Prefer Rust bindings for performance, fallback to Python
 try:
     import octordle_solver_rs as rs
+
     Puzzle = rs.Puzzle
     get_best_guess_multiple_puzzles = rs.get_best_guess_multiple_puzzles
     _use_rust = True
 except ImportError:
     from ..solver import Puzzle, get_best_guess_multiple_puzzles
+
     _use_rust = False
 
 from .helpers import Color, LetterWidget

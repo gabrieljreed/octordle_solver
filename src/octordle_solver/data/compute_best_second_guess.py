@@ -3,14 +3,42 @@
 import itertools
 import json
 from pathlib import Path
-from typing import Callable, Iterable, Sequence
+from typing import Callable, Iterable, Sequence, Any, Optional
 
 from tqdm import tqdm
 
-from octordle_solver.solver import Puzzle
 from octordle_solver.constants import STARTING_GUESS
+from octordle_solver.dictionary import dictionary
+
+_rust_puzzle_cls: Optional[Any] = None
+_python_puzzle_cls: Optional[Any] = None
+
+# Prefer Rust bindings for performance, fallback to Python
+try:
+    import octordle_solver_rs as rs
+
+    _rust_puzzle_cls = rs.Puzzle
+    _use_rust = True
+except ImportError:
+    from ..solver import Puzzle as PythonPuzzle
+
+    _python_puzzle_cls = PythonPuzzle
+    _use_rust = False
 
 output_file = Path(__file__).parent / "best_second_guesses.json"
+
+
+def make_puzzle():
+    """Create a backend-appropriate puzzle instance."""
+    if _use_rust:
+        assert _rust_puzzle_cls is not None
+        return _rust_puzzle_cls(
+            dictionary.valid_answers,
+            dictionary.valid_guesses,
+            get_best_answer=True,
+        )
+    assert _python_puzzle_cls is not None
+    return _python_puzzle_cls()
 
 
 def get_all_possibilities() -> list[tuple[int, ...]]:
@@ -26,7 +54,7 @@ def possibility_to_key(possibility: Sequence[int]) -> str:
 def compute_best_second_guesses(
     possibilities: Iterable[Sequence[int]],
     *,
-    puzzle_cls=Puzzle,
+    puzzle_factory=make_puzzle,
     starting_guess: str = STARTING_GUESS,
     status_callback: Callable[[str], None],
 ) -> tuple[dict[str, str], int]:
@@ -35,7 +63,7 @@ def compute_best_second_guesses(
     num_invalid_states = 0
 
     for possibility in possibilities:
-        puzzle = puzzle_cls()
+        puzzle = puzzle_factory()
         puzzle.make_guess(starting_guess, list(possibility))
         guess_display = str(puzzle.guesses[0])
         remaining_words_count = len(puzzle.remaining_words)

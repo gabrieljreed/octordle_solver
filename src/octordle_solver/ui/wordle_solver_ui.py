@@ -16,10 +16,12 @@ from ..utils import sanitize_words
 # Prefer Rust bindings for performance, fallback to Python
 try:
     import octordle_solver_rs as rs
+
     Puzzle = rs.Puzzle
     _use_rust = True
 except ImportError:
     from ..solver import Puzzle
+
     _use_rust = False
 from .helpers import Color, LetterWidget, get_word_colors, create_colored_label
 from .threads import ThreadWorker
