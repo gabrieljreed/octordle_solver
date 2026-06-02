@@ -9,14 +9,12 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt
 
 from ..constants import STARTING_GUESS
-from ..solver import (
-    Puzzle,
-    PossibilityState,
-    get_cached_best_second_guess,
-)
+from ..solver import PossibilityState, get_cached_best_second_guess
 from ..utils import sanitize_words
+from ..backend import make_puzzle
 from .helpers import Color, LetterWidget, get_word_colors, create_colored_label
 from .threads import ThreadWorker
+
 
 WORDLE_SOLVER_DARK_STYLE_SHEET = """
 QMainWindow, QWidget {
@@ -260,7 +258,8 @@ class WordleSolver(QtWidgets.QMainWindow):
         self._current_row = 0
         self._current_col = 0
 
-        self.puzzle = Puzzle()
+        # Initialize puzzle with Rust or Python backend
+        self.puzzle = make_puzzle()
         self.update_remaining_words_widget()
 
         self.threadpool = QtCore.QThreadPool()

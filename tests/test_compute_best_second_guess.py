@@ -6,6 +6,7 @@ import octordle_solver.data.compute_best_second_guess as compute_module
 from octordle_solver.data.compute_best_second_guess import (
     compute_best_second_guesses,
     get_all_possibilities,
+    make_puzzle,
     possibility_to_key,
     write_best_second_guesses,
 )
@@ -39,6 +40,15 @@ def test_possibility_to_key():
     assert possibility_to_key([2, 2, 0, 1, 1]) == "22011"
 
 
+def test_make_puzzle_returns_backend_compatible_puzzle():
+    puzzle = make_puzzle()
+
+    assert puzzle.__class__.__name__ == "Puzzle"
+    assert hasattr(puzzle, "make_guess")
+    assert hasattr(puzzle, "remaining_words")
+    assert hasattr(puzzle, "all_answers")
+
+
 def test_compute_best_second_guesses_handles_all_statuses():
     possibilities = [
         (0, 0, 0, 0, 0),
@@ -67,7 +77,7 @@ def test_compute_best_second_guesses_handles_all_statuses():
 
     results, invalid_state_count = compute_best_second_guesses(
         possibilities,
-        puzzle_cls=fake_puzzle_cls,
+        puzzle_factory=fake_puzzle_cls,
         starting_guess="CRANE",
         status_callback=statuses.append,
     )

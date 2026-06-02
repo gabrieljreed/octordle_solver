@@ -7,8 +7,8 @@ from typing import Callable, Iterable, Sequence
 
 from tqdm import tqdm
 
-from octordle_solver.solver import Puzzle
 from octordle_solver.constants import STARTING_GUESS
+from octordle_solver.backend import make_puzzle
 
 output_file = Path(__file__).parent / "best_second_guesses.json"
 
@@ -26,7 +26,7 @@ def possibility_to_key(possibility: Sequence[int]) -> str:
 def compute_best_second_guesses(
     possibilities: Iterable[Sequence[int]],
     *,
-    puzzle_cls=Puzzle,
+    puzzle_factory=make_puzzle,
     starting_guess: str = STARTING_GUESS,
     status_callback: Callable[[str], None],
 ) -> tuple[dict[str, str], int]:
@@ -35,7 +35,7 @@ def compute_best_second_guesses(
     num_invalid_states = 0
 
     for possibility in possibilities:
-        puzzle = puzzle_cls()
+        puzzle = puzzle_factory()
         puzzle.make_guess(starting_guess, list(possibility))
         guess_display = str(puzzle.guesses[0])
         remaining_words_count = len(puzzle.remaining_words)

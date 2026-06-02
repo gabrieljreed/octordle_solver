@@ -7,7 +7,20 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt
 
 from ..constants import STARTING_GUESS
-from ..solver import PossibilityState, Puzzle, get_best_guess_multiple_puzzles
+from ..solver import PossibilityState
+from ..backend import make_puzzle
+
+
+try:
+    import octordle_solver_rs as rs
+
+    get_best_guess_multiple_puzzles = rs.get_best_guess_multiple_puzzles
+except ImportError:
+    # Import Python version as fallback
+    from ..solver import get_best_guess_multiple_puzzles as get_best_guess_multiple_puzzles_py
+
+    get_best_guess_multiple_puzzles = get_best_guess_multiple_puzzles_py
+
 from .helpers import Color, LetterWidget
 from .threads import ThreadWorker
 
@@ -160,7 +173,8 @@ class OctordleSolver(QtWidgets.QMainWindow):
         self.num_puzzles = 8
         self.num_guesses = 13
 
-        self.puzzles = [Puzzle() for _ in range(self.num_puzzles)]
+        # Initialize puzzles with backend-appropriate factory
+        self.puzzles = [make_puzzle() for _ in range(self.num_puzzles)]
 
         self.best_guess = STARTING_GUESS
 
@@ -437,7 +451,7 @@ class OctordleSolver(QtWidgets.QMainWindow):
         self.num_puzzles = dialog.num_puzzles
         self.num_guesses = dialog.num_guesses
 
-        self.puzzles = [Puzzle() for _ in range(self.num_puzzles)]
+        self.puzzles = [make_puzzle() for _ in range(self.num_puzzles)]
 
         self.clear_puzzle_widgets()
         self.create_puzzle_widgets()
