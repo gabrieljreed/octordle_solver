@@ -12,6 +12,15 @@ from octordle_solver.constants import STARTING_GUESS
 from octordle_solver.ui.helpers import get_word_colors, style_text
 from PySide6.QtCore import Qt
 from PySide6 import QtWidgets
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _force_python_backend_in_tests(monkeypatch):
+    """Force tests to use Python backend for predictable attribute assignment."""
+    import octordle_solver.backend as backend_module
+
+    monkeypatch.setattr(backend_module, "_use_rust", False)
 
 
 class TestWordleSolverUI:
