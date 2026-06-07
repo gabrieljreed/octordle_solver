@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-06-07
+
+### Added
+
+- Add Rust bindings
+
 ## [1.5.0] - 2026-04-14
 
 ### Changed
@@ -54,7 +60,8 @@
 
 - Initial release!
 
-[Unreleased]: https://github.com/gabrieljreed/octordle_solver/compare/1.5.0...HEAD
+[Unreleased]: https://github.com/gabrieljreed/octordle_solver/compare/1.6.0...HEAD
+[1.6.0]: https://github.com/gabrieljreed/octordle_solver/releases/tag/1.6.0
 [1.5.0]: https://github.com/gabrieljreed/octordle_solver/releases/tag/1.5.0
 [1.4.0]: https://github.com/gabrieljreed/octordle_solver/releases/tag/1.4.0
 [1.3.0]: https://github.com/gabrieljreed/octordle_solver/releases/tag/1.3.0
