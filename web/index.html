@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wordle Solver</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <h1>Wordle Solver</h1>
+        <button id="dark-mode-toggle" aria-label="Toggle dark mode">🌙</button>
+      </header>
+      <main>
+        <div id="grid"></div>
+        <div id="sidebar">
+          <section id="best-guesses-section">
+            <h2>Best Guesses</h2>
+            <button id="get-guesses-btn">Get best guesses</button>
+            <button id="reset-btn">Reset</button>
+            <ul id="best-guesses-list"></ul>
+          </section>
+          <section id="groups-section">
+            <h2>Group Info</h2>
+            <p id="groups-stats"></p>
+            <ul id="groups-list"></ul>
+          </section>
+          <section id="remaining-section">
+            <h2>Remaining Words (<span id="remaining-count">0</span>)</h2>
+            <button id="copy-remaining-btn">Copy</button>
+            <ul id="remaining-list"></ul>
+          </section>
+        </div>
+      </main>
+    </div>
+    <script type="module" src="./src/app.ts"></script>
+  </body>
+</html>
