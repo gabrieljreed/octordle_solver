@@ -2,6 +2,7 @@ import { loadData } from "./data";
 import { filterWords } from "./solver";
 import { Grid } from "./grid";
 import { BestGuessList, GroupsPanel, RemainingWordsPanel } from "./panels";
+import { OnScreenKeyboard } from "./keyboard";
 import type { AppData, Guess, WorkerRequest, WorkerResponse, AnswerPossibility } from "./types";
 
 const STARTING_GUESS = "SLATE";
@@ -62,6 +63,7 @@ class App {
           </section>
         </div>
       </main>
+      <div id="keyboard"></div>
     `;
 
     this.worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
@@ -98,6 +100,11 @@ class App {
     );
     document.getElementById("dark-mode-toggle")!.addEventListener("click", () =>
       this.toggleDarkMode(),
+    );
+
+    new OnScreenKeyboard(
+      document.getElementById("keyboard") as HTMLElement,
+      (key) => this.grid.handleKey(key),
     );
 
     document.addEventListener("keydown", (e) => {

@@ -219,6 +219,45 @@ li.selected {
   display: block;
 }
 
+/* ── On-screen keyboard ── */
+#keyboard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0.75rem 0.5rem 1rem;
+}
+
+.kb-row {
+  display: flex;
+  gap: 5px;
+}
+
+.kb-key {
+  min-width: 36px;
+  height: 48px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  cursor: pointer;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.kb-key--wide {
+  min-width: 56px;
+  font-size: 0.75rem;
+}
+
+.kb-key:active {
+  filter: brightness(0.85);
+}
+
 /* ── Responsive ── */
 @media (max-width: 600px) {
   .tile {
