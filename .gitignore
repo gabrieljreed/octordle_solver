@@ -31,3 +31,5 @@ htmlcov/
 scratch_pad.py
 /1
 crates/octordle_solver_rs/1
+
+node_modules/
